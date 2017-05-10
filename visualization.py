@@ -24,7 +24,7 @@ def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
     """
     if not len(LOG_DIR): LOG_DIR = cfg.TENSORBOARD_PATH
     # create summary writer
-    test_writer = tf.summary.FileWriter(cfg.TENSORBOARD_PATH, sess.graph)
+    test_writer = tf.summary.FileWriter(LOG_DIR, sess.graph)
     # The embedding variable, which needs to be stored
     # Note this must a Variable not a Tensor!
     embedding_var = tf.Variable(EMB, name='output_tensor')
