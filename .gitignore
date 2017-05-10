@@ -1,2 +1,7 @@
+tensorboard/
 models/
 data/
+datasetORIGINAL/
+__pycache__/
+*.npy
+

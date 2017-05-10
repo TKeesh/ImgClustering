@@ -12,7 +12,7 @@ import os
 from synset import *
 #from tsne import tsne
 
-def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
+def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR, num_layers):
     """
     Create summary for embeddings.
     :param sess: Session object.
@@ -46,8 +46,8 @@ def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
 
     #NASE save embedings as np
     im_names = np.asarray(image_names)
-    np.save('image_names', im_names)
-    np.save('embeddings', EMB)
+    np.save('image_names_' + str(len(EMB[0])) + '_ResNet_' + str(num_layers) + 'L', im_names)
+    np.save('embeddings_' + str(len(EMB[0])) + '_ResNet_' + str(num_layers) + 'L', EMB)
 
     # projector run
     projector.visualize_embeddings(summary_writer, config)
@@ -67,7 +67,7 @@ def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
             metadata_file.write('%06d\t%s\n' % (i, name+': '+' '.join(synset[pred[0]].split()[1:])))
             cnf.write(name + ': ')
             topX = [' '.join(synset[pred[i]].split()[1:]) for i in range(7)]
-            print (topX)
+            #print (topX)
             cnf.write(' | '.join(topX))            
             cnf.write('\n')
         cnf.close()

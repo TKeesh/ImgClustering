@@ -2,11 +2,11 @@ import os
 os.environ["GLOG_minloglevel"] = "2"
 import sys
 import re
-import caffe
+#import caffe
 import numpy as np
 import tensorflow as tf
 import skimage.io
-from caffe.proto import caffe_pb2
+#from caffe.proto import caffe_pb2
 from synset import *
 
 import resnet
@@ -85,7 +85,7 @@ def load_image(path, size=224):
     yy = int((img.shape[0] - short_edge) / 2)
     xx = int((img.shape[1] - short_edge) / 2)
     crop_img = img[yy:yy + short_edge, xx:xx + short_edge]
-    resized_img = skimage.transform.resize(crop_img, (size, size))
+    resized_img = skimage.transform.resize(crop_img, (size, size), mode='constant')
     return resized_img
 
 

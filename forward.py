@@ -6,7 +6,7 @@ import time
 from visualization import *
 import cv2
 
-layers = 50
+layers = 101
 
 sess = tf.Session()
 
@@ -29,10 +29,12 @@ start_time = time.time()
 #image_batch = []
 EMB1, EMB2 = None, None
 image_names = os.listdir('./data/')
-image_names = image_names[:100]
+image_names = image_names[:]
 images_list = np.zeros(shape=(len(image_names), cfg.EMB_IMAGE_HEIGHT, cfg.EMB_IMAGE_WIDTH, 3))
 for i, img_name in enumerate(image_names):
-	print(img_name)
+	if i == 1:
+		start_time = time.time()
+	print(str(i+1).rjust(4) + '/' + str(len(image_names)) + ' - ' + img_name)
 	img = load_image("./data/{0}".format(img_name))
 
 	image = cv2.imread("./data/{0}".format(img_name))
@@ -48,12 +50,12 @@ for i, img_name in enumerate(image_names):
 		
 	# treba li ovaj flatten?! Treba!
 	embedding = prob[0].flatten()
-	if EMB1 == None:
+	if EMB1 is None:
 		EMB1 = np.zeros((len(image_names), len(embedding)), dtype='float32')
 	EMB1[i] = embedding
 
 	embedding = prob[1].flatten()
-	if EMB2 == None:
+	if EMB2 is None:
 		EMB2 = np.zeros((len(image_names), len(embedding)), dtype='float32')
 	EMB2[i] = embedding
 
@@ -66,8 +68,8 @@ for i, img_name in enumerate(image_names):
 print("--- %s seconds ---" % (time.time() - start_time))
 
 print('saving embeddings')
-create_summary_embeddings(sess, images_list, image_names, EMB1, 'tensorboard/testEMB1')
-create_summary_embeddings(sess, images_list, image_names, EMB2, 'tensorboard/testEMB2')
+create_summary_embeddings(sess, images_list, image_names, EMB1, 'tensorboard/test_' + str(len(EMB1[0])) + '_ResNet_' + str(layers) + 'L', layers) # dodao sam i ovaj zadnji argument 'layers'
+create_summary_embeddings(sess, images_list, image_names, EMB2, 'tensorboard/test_' + str(len(EMB2[0])) + '_ResNet_' + str(layers) + 'L', layers) # da kod spremanja znamo velicinu mreze
 print('done')
 print('creating folders')
 #create_folders(EMB2, image_names, './data/')
