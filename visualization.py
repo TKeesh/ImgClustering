@@ -7,12 +7,17 @@ import numpy as np
 
 from glob import glob
 from scipy import spatial
+from sklearn import mixture
+from sklearn.decomposition import PCA
+from scipy.cluster.vq import kmeans,vq
+from scipy.spatial.distance import cdist
+
 import os
 
 from synset import *
 #from tsne import tsne
 
-def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR, num_layers):
+def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
     """
     Create summary for embeddings.
     :param sess: Session object.
@@ -46,8 +51,9 @@ def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR, num_layer
 
     #NASE save embedings as np
     im_names = np.asarray(image_names)
-    np.save('image_names_' + str(len(EMB[0])) + '_ResNet_' + str(num_layers) + 'L', im_names)
-    np.save('embeddings_' + str(len(EMB[0])) + '_ResNet_' + str(num_layers) + 'L', EMB)
+    LOG_DIR_name = os.path.split(LOG_DIR)
+    np.save(os.path.join(LOG_DIR_name[0], 'image_names_' + LOG_DIR_name[1]), im_names)
+    np.save(os.path.join(LOG_DIR_name[0], 'embeddings_' + LOG_DIR_name[1]), EMB)
 
     # projector run
     projector.visualize_embeddings(summary_writer, config)
@@ -60,7 +66,7 @@ def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR, num_layer
     if len(EMB[0]) == 1000:
         metadata_file = open(os.path.join(LOG_DIR, 'metadata.tsv'), 'w')
         metadata_file.write('Name\tClass\n')
-        cnf = open('./classes.txt', 'w')
+        cnf = open(os.path.join(LOG_DIR_name[0], 'classes.txt'), 'w')
         for i, name in enumerate(image_names):
             prob = EMB[i]
             pred = np.argsort(prob)[::-1]
@@ -124,9 +130,18 @@ def _images_to_sprite(data):
 
 def make_folders(clusters, datasetFolder, extension, fnames):
     folder = datasetFolder + extension
+    datasetFolder = datasetFolder.strip('.').strip('/')
+    outFile = open(datasetFolder+'.txt','w')
+    for imgi in range(len(fnames)):
+        outFile.write('\n')
+        outFile.write(fnames[imgi] + '\n')
+        outFile.write('Cluster: ' + str(clusters[imgi]) + '\n')
+    outFile.close()
     if os.path.exists(folder): 
         import shutil
         shutil.rmtree(folder)
+    print(len(clusters))
+    print(len(fnames))
     for imgi in range(len(clusters)):
         # print (fnames[imgi])
         if not os.path.exists(folder + '\\' + str(clusters[imgi])):
@@ -142,58 +157,55 @@ def create_folders(EMB, image_names = '', images_folder = ''):
     from sklearn.manifold import TSNE
     
 
-    model = TSNE(init='pca', n_components=3, random_state=0, n_iter=800, perplexity=5, learning_rate=10, metric='cosine', method='exact', n_iter_without_progress=1000)    
-    np.set_printoptions(suppress=True)
-    print("TSNEfit")    
-    mat2D = model.fit_transform(EMB) 
-    # print(type(EMB))
-    # print(EMB.dtype)
-    # print (EMB)
-    # try:
-    #     input("Press enter to continue")
-    # except SyntaxError:
-    #     pass
+    # model = TSNE(init='pca', n_components=3, random_state=0, n_iter=310, perplexity=15, learning_rate=10, metric='cosine', method='exact', n_iter_without_progress=1000)    
+    # np.set_printoptions(suppress=True)
+    # print("TSNEfit")    
+    # mat2D = model.fit_transform(EMB) 
+   
     #mat2D = tsne(X = EMB.astype('float64'), no_dims = 3, initial_dims = len(EMB[0]), perplexity = 5.0)
-    # print(type(mat2D))
-    # print(mat2D.dtype)
-    # print (mat2D)
     
-    print(mat2D.shape)
-    maxx = np.max(mat2D[:, 0])
-    minx = np.min(mat2D[:, 0])
+    #print(mat2D.shape)
 
-    maxy = np.max(mat2D[:, 1])
-    miny = np.min(mat2D[:, 1])
+    # maxx = np.max(mat2D[:, 0])
+    # minx = np.min(mat2D[:, 0])
 
-    maxz = np.max(mat2D[:, 2])
-    minz = np.min(mat2D[:, 2])
+    # maxy = np.max(mat2D[:, 1])
+    # miny = np.min(mat2D[:, 1])
 
-    print("maxx = " + str(maxx))
-    print("minx = " + str(minx))
-    print("maxy = " + str(maxy))
-    print("miny = " + str(miny))
-    print("maxz = " + str(maxz))
-    print("minz = " + str(minz))
+    # maxz = np.max(mat2D[:, 2])
+    # minz = np.min(mat2D[:, 2])
+
+    # print("maxx = " + str(maxx))
+    # print("minx = " + str(minx))
+    # print("maxy = " + str(maxy))
+    # print("miny = " + str(miny))
+    # print("maxz = " + str(maxz))
+    # print("minz = " + str(minz))
     # eps = np.maximum(np.maximum(maxx-minx, maxy-miny), maxz-minz) / 10.0
-    eps = ((maxx-minx) + (maxy-miny) + (maxz-minz)) / 3.0 * 490000 / len(EMB) / len(EMB) / len(EMB)
-    print ('eps = ', eps)
+    # eps = ((maxx-minx) + (maxy-miny) + (maxz-minz)) / 3.0 * 490000 / len(EMB) / len(EMB) / len(EMB)
+    # print ('eps = ', eps)
 
-    from mpl_toolkits.mplot3d import Axes3D
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    # print(mat2D[:,0])
-    ax.scatter(mat2D[:,0], mat2D[:,1], mat2D[:,2], c='r')
-    #plt.show()
-    fig.savefig('./TSNEplot.png')
-    #mat2D = mat2D.transpose()
-
-    #quit()
+    # from mpl_toolkits.mplot3d import Axes3D
+    # import matplotlib.pyplot as plt
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(mat2D[:,0], mat2D[:,1], mat2D[:,2], c='r')
+    # fig.savefig('./TSNEplot.png')
     
+    #mat2D = mat2D.transpose() 
     # print (type(mat2D), mat2D.shape)
-    clusters = DBSCAN(eps=eps, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
-    #clusters = DBSCAN(eps=0.75, algorithm='brute', min_samples=1, metric='cosine').fit_predict(EMB)
-    # print(clusters)
+
+    # clusters = [len(EMB)+1]
+    # eps = 0.05
+    # while(max(clusters)+1 > 16): #< 8 or max(clusters)+1 > 14
+    #     clusters = DBSCAN(eps=eps, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
+    #     #clusters = DBSCAN(eps=eps, algorithm='brute', min_samples=1, metric='cosine').fit_predict(EMB).flatten()        
+    #     print ('clusters: ', max(clusters)+1)
+    #     print ('eps: ', eps)
+    #     eps += 0.05
+    # eps -= 0.05
+    
+
 
     if len(images_folder): 
         datasetFolder = images_folder
@@ -207,35 +219,45 @@ def create_folders(EMB, image_names = '', images_folder = ''):
     try: 
         fnames = [x.decode('UTF-8') for x in fnames]
     except: pass
-    # print (fnames[0], type(fnames))
-    datasetFolder = datasetFolder.strip('.').strip('/')
-    outFile = open(datasetFolder+'.txt','w')
-    for imgi in range(len(EMB)):
-        outFile.write('\n')
-        outFile.write(fnames[imgi] + '\n')
-        outFile.write('Cluster: ' + str(clusters[imgi]) + '\n')
-    outFile.close()
+    # # print (fnames[0], type(fnames))
   
-    # if os.path.exists(datasetFolder+'Clusters'): 
-    #     import shutil
-    #     shutil.rmtree(datasetFolder+'Clusters')
-    # for imgi in range(len(EMB)):
-    #     print (fnames[imgi])
-    #     if not os.path.exists(datasetFolder+'Clusters' + '\\' + str(clusters[imgi])):
-    #         os.makedirs(datasetFolder+'Clusters' + '\\' + str(clusters[imgi]))
-    #     imgorg = glob(datasetFolder + '/' + fnames[imgi].split('.')[0] + '.*')[0]
-    #     try: img = (scipy.misc.imread(imgorg)[:,:,:3]).astype('float32')
-    #     except: img = (scipy.misc.imread(imgorg)[:]).astype('float32')
-    #     scipy.misc.imsave(os.path.join(datasetFolder+'Clusters' + '\\' + str(clusters[imgi]) + '\\', imgorg.split('\\')[-1]), img)
-    make_folders(clusters, datasetFolder, 'Clusters', fnames)
+    # pca = PCA(n_components=3)
+    # pca.fit(EMB)
+    # print('PCA components: ' + str(pca.get_params())) 
 
-    clusters_mean = np.zeros((max(clusters)+1, len(EMB[0])))
-    clusters_examples = np.zeros((max(clusters)+1, 1))
-    for i, c in enumerate(clusters):
-        clusters_mean[c] += EMB[i]
-        clusters_examples += 1
-    for i in range(len(clusters_mean)):
-        clusters_mean[i] /= clusters_examples[i]
+    # K = range(1, 20)
+    # KM = [kmeans(EMB, k) for k in K]
+    # centroids = [cent for (cent,var) in KM]
+
+    # D_k = [cdist(EMB, cent, 'euclidean') for cent in centroids]
+    # cIdx = [np.argmin(D,axis=1) for D in D_k]
+    # dist = [np.min(D,axis=1) for D in D_k]
+    # avgWithinSS = [sum(d)/EMB.shape[0] for d in dist]
+
+    # print('avgWithinSS: ' + str(np.round(avgWithinSS)))
+
+    print('fitting...')
+    dpgmm = mixture.BayesianGaussianMixture(n_components=12, covariance_type='full').fit(EMB)
+    print('predicting...')
+    pred = dpgmm.predict(EMB)
+    # print('converged_: ' + str(dpgmm.converged_))
+    # print('len(pred): ' + str(len(pred)))
+    print('pred: ' + str(pred))
+    print('done')
+    make_folders(pred, datasetFolder, 'Clusters_GMM_3', fnames)
+    # make_folders(clusters, datasetFolder, 'Clusters'+str(eps), fnames)
+
+
+
+
+
+    # clusters_mean = np.zeros((max(clusters)+1, len(EMB[0])))
+    # clusters_examples = np.zeros((max(clusters)+1, 1))
+    # for i, c in enumerate(clusters):
+    #     clusters_mean[c] += EMB[i]
+    #     clusters_examples += 1
+    # for i in range(len(clusters_mean)):
+    #     clusters_mean[i] /= clusters_examples[i]
 
 
     # result = 1 - spatial.distance.cosine(EMB[1], EMB[3])
@@ -248,26 +270,28 @@ def create_folders(EMB, image_names = '', images_folder = ''):
     # result = np.linalg.norm(mat2D[1]-mat2D[3])
     # print("euklidna_3: " + str(result))
 
-    model = TSNE(n_components=3, random_state=0, n_iter=720, perplexity=5, learning_rate=10, metric='cosine')
-    print (clusters_mean.shape)
-    mat2D = model.fit_transform(clusters_mean) 
+    # model = TSNE(n_components=3, random_state=0, n_iter=720, perplexity=5, learning_rate=10, metric='cosine')
+    # print (clusters_mean.shape)
+    # mat2D = model.fit_transform(clusters_mean) 
 
-    clusters_of_clusters = DBSCAN(eps=1.5, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
-    # print(clusters_of_clusters)
-    clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    make_folders(clusters_of_clusters, datasetFolder, '1_5', fnames)
-    clusters_of_clusters = DBSCAN(eps=2, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
-    # print(clusters_of_clusters)
-    clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    make_folders(clusters_of_clusters, datasetFolder, '2', fnames)
-    clusters_of_clusters = DBSCAN(eps=2.5, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
-    # print(clusters_of_clusters)
-    clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    make_folders(clusters_of_clusters, datasetFolder, '2_5', fnames)
-    clusters_of_clusters = DBSCAN(eps=3, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
-    # print(clusters_of_clusters)
-    clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    make_folders(clusters_of_clusters, datasetFolder, '3', fnames)
+    # clusters_of_clusters = DBSCAN(eps=1.5, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
+    # # print(clusters_of_clusters)
+    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
+    # make_folders(clusters_of_clusters, datasetFolder, '1_5', fnames)
+    # clusters_of_clusters = DBSCAN(eps=2, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
+    # # print(clusters_of_clusters)
+    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
+    # make_folders(clusters_of_clusters, datasetFolder, '2', fnames)
+    # clusters_of_clusters = DBSCAN(eps=2.5, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
+    # # print(clusters_of_clusters)
+    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
+    # make_folders(clusters_of_clusters, datasetFolder, '2_5', fnames)
+    # clusters_of_clusters = DBSCAN(eps=3, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
+    # # print(clusters_of_clusters)
+    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
+    # make_folders(clusters_of_clusters, datasetFolder, '3', fnames)
+
+
 '''
     for i in range(len(EMB[1])):
         p = 1.0/(1+np.exp(EMB[1][i]))

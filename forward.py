@@ -8,6 +8,9 @@ import cv2
 
 layers = 101
 
+dataDir = './data/'
+#dataDir = './dataOznacena/'
+
 sess = tf.Session()
 
 new_saver = tf.train.import_meta_graph('./models/'+meta_fn(layers))
@@ -28,16 +31,16 @@ start_time = time.time()
 
 #image_batch = []
 EMB1, EMB2 = None, None
-image_names = os.listdir('./data/')
+image_names = os.listdir(dataDir)
 image_names = image_names[:]
 images_list = np.zeros(shape=(len(image_names), cfg.EMB_IMAGE_HEIGHT, cfg.EMB_IMAGE_WIDTH, 3))
 for i, img_name in enumerate(image_names):
 	if i == 1:
 		start_time = time.time()
 	print(str(i+1).rjust(4) + '/' + str(len(image_names)) + ' - ' + img_name)
-	img = load_image("./data/{0}".format(img_name))
+	img = load_image(dataDir + img_name)
 
-	image = cv2.imread("./data/{0}".format(img_name))
+	image = cv2.imread(dataDir + img_name)
 	image = cv2.resize(image, (cfg.EMB_IMAGE_HEIGHT, cfg.EMB_IMAGE_WIDTH), interpolation = cv2.INTER_CUBIC)
 	images_list[i] = image
 
@@ -68,9 +71,11 @@ for i, img_name in enumerate(image_names):
 print("--- %s seconds ---" % (time.time() - start_time))
 
 print('saving embeddings')
-create_summary_embeddings(sess, images_list, image_names, EMB1, 'tensorboard/test_' + str(len(EMB1[0])) + '_ResNet_' + str(layers) + 'L', layers) # dodao sam i ovaj zadnji argument 'layers'
-create_summary_embeddings(sess, images_list, image_names, EMB2, 'tensorboard/test_' + str(len(EMB2[0])) + '_ResNet_' + str(layers) + 'L', layers) # da kod spremanja znamo velicinu mreze
+# args --tb
+#create_summary_embeddings(sess, images_list, image_names, EMB1, 'tensorboard/test_' + str(len(EMB1[0])) + '_ResNet-L' + str(layers)) 
+create_summary_embeddings(sess, images_list, image_names, EMB2, 'tensorboard/test_' + str(len(EMB2[0])) + '_ResNet-L' + str(layers))
 print('done')
 print('creating folders')
-#create_folders(EMB2, image_names, './data/')
+# args --f
+create_folders(EMB2, image_names, dataDir)
 print('done')
