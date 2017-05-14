@@ -9,8 +9,6 @@ from glob import glob
 from scipy import spatial
 from sklearn import mixture
 from sklearn.decomposition import PCA
-from scipy.cluster.vq import kmeans,vq
-from scipy.spatial.distance import cdist
 
 import os
 
@@ -140,13 +138,11 @@ def make_folders(clusters, datasetFolder, extension, fnames):
     if os.path.exists(folder): 
         import shutil
         shutil.rmtree(folder)
-    print(len(clusters))
-    print(len(fnames))
     for imgi in range(len(clusters)):
         # print (fnames[imgi])
         if not os.path.exists(folder + '\\' + str(clusters[imgi])):
             os.makedirs(folder + '\\' + str(clusters[imgi]))
-        imgorg = glob(datasetFolder + '/' + fnames[imgi].split('.')[0] + '.*')[0]
+        imgorg = glob(os.path.join(datasetFolder, fnames[imgi].split('.')[0]) + '.*')[0]
         try: img = (scipy.misc.imread(imgorg)[:,:,:3]).astype('float32')
         except: img = (scipy.misc.imread(imgorg)[:]).astype('float32')
         scipy.misc.imsave(os.path.join(folder + '\\' + str(clusters[imgi]) + '\\', imgorg.split('\\')[-1]), img)
@@ -224,24 +220,12 @@ def create_folders(EMB, image_names = '', images_folder = ''):
     # pca = PCA(n_components=3)
     # pca.fit(EMB)
     # print('PCA components: ' + str(pca.get_params())) 
-
-    # K = range(1, 20)
-    # KM = [kmeans(EMB, k) for k in K]
-    # centroids = [cent for (cent,var) in KM]
-
-    # D_k = [cdist(EMB, cent, 'euclidean') for cent in centroids]
-    # cIdx = [np.argmin(D,axis=1) for D in D_k]
-    # dist = [np.min(D,axis=1) for D in D_k]
-    # avgWithinSS = [sum(d)/EMB.shape[0] for d in dist]
-
-    # print('avgWithinSS: ' + str(np.round(avgWithinSS)))
-
     print('fitting...')
     dpgmm = mixture.BayesianGaussianMixture(n_components=12, covariance_type='full').fit(EMB)
     print('predicting...')
     pred = dpgmm.predict(EMB)
-    # print('converged_: ' + str(dpgmm.converged_))
-    # print('len(pred): ' + str(len(pred)))
+    # print('precisions: ' + str(dpgmm.precisions_))
+    # print('len(pred): ' + str(pred))
     print('pred: ' + str(pred))
     print('done')
     make_folders(pred, datasetFolder, 'Clusters_GMM_3', fnames)
