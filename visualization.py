@@ -147,6 +147,63 @@ def make_folders(clusters, datasetFolder, extension, fnames):
         except: img = (scipy.misc.imread(imgorg)[:]).astype('float32')
         scipy.misc.imsave(os.path.join(folder + '\\' + str(clusters[imgi]) + '\\', imgorg.split('\\')[-1]), img)
 
+def create_folders_2(EMB, image_names = '', images_folder = ''):
+    from sklearn.neighbors import NearestNeighbors
+
+    if len(images_folder): 
+        datasetFolder = images_folder
+    else: 
+        datasetFolder = cfg.TRAIN_FOLDER
+    if len(image_names): 
+        fnames = image_names
+    else: 
+        fnames = os.listdir(images_folder)
+        fnames.sort()
+    try: 
+        fnames = [x.decode('UTF-8') for x in fnames]
+    except: pass
+
+    # for n_components in range(7, 15):
+    for n_components in [12]:
+        print('fitting...')
+        dpgmm = mixture.BayesianGaussianMixture(max_iter=3, n_components=12, covariance_type='full').fit(EMB)
+        print('predicting...')
+        pred = dpgmm.predict(EMB)
+
+        new_samples = dpgmm.sample(EMB.shape[0]) # iz dobivenih gaussova sempliram nove podatke koje cu usporedivati sa nasim podacima
+
+        avg_dist_1 = 0 # prosjecna udaljenost nekog primjera od njegovih K najblizih susjeda u ORIGINALNOM datasetu
+        avg_dist_2 = 0 # prosjecna udaljenost nekog primjera od njegovih K najblizih susjeda u GENERIRANOM datasetu
+        for our_sample in EMB:
+            n_neighbors = 5
+
+            neighbors = NearestNeighbors(n_neighbors=n_neighbors, algorithm='ball_tree').fit(EMB)
+            distances, indices = neighbors.kneighbors(our_sample)
+            dist_1 = np.sum(distances) / n_neighbors # prosjecna udaljenost naseg primjera od njegovih 5 najblizih susjeda iz ORIGINALNOG skupa
+
+            neighbors = NearestNeighbors(n_neighbors=n_neighbors, algorithm='ball_tree').fit(new_samples)
+            distances, indices = neighbors.kneighbors(our_sample)
+            dist_2 = np.sum(distances) / n_neighbors # prosjecna udaljenost naseg primjera od njegovih 5 najblizih susjeda iz GENERIRANOG skupa
+
+            avg_dist_1 += dist_1
+            avg_dist_2 += dist_2
+
+        avg_dist_1 /= EMB.shape[0]
+        avg_dist_2 /= EMB.shape[0]
+
+        difference = np.absolute(avg_dist_1 - avg_dist_2)
+
+        # ovo nas najvise zanima jer ako su izracunati gaussovi stvarno tocni, onda bi semplirani podaci trebali biti slicni originalnim podacima
+        # pa bi ova razlika trebala biti mala, dok bi u protivnom ta razlika trebala biti veca
+        # nadamo se da ce za n_components = 12 ispasti da je ta razlika najmanja, ili mozda da tad padne za veliki iznos ili tak nes
+        print('n_components: ' + str(n_components))
+        print('difference of original and sampled datasets: ' + str(difference))
+
+        # print('pred: ' + str(pred))
+
+    print('done')
+
+    # make_folders(pred, datasetFolder, 'Clusters_GMM_3', fnames)  
 
 def create_folders(EMB, image_names = '', images_folder = ''):    
     from sklearn.cluster import DBSCAN   
