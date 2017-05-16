@@ -163,26 +163,33 @@ def create_folders_2(EMB, image_names = '', images_folder = ''):
         fnames = [x.decode('UTF-8') for x in fnames]
     except: pass
 
-    # for n_components in range(7, 15):
-    for n_components in [12]:
+    for n_components in range(7, 15):
+    # for n_components in [12]:
+        
         print('fitting...')
-        dpgmm = mixture.BayesianGaussianMixture(max_iter=3, n_components=12, covariance_type='full').fit(EMB)
+        dpgmm = mixture.BayesianGaussianMixture(n_components=12, covariance_type='full').fit(EMB)
+        
         print('predicting...')
         pred = dpgmm.predict(EMB)
 
-        new_samples = dpgmm.sample(EMB.shape[0]) # iz dobivenih gaussova sempliram nove podatke koje cu usporedivati sa nasim podacima
+        print('sampling...')
+        new_samples = np.array(dpgmm.sample(EMB.shape[0])[0]) # iz dobivenih gaussova sempliram nove podatke koje cu usporedivati sa nasim podacima
+
+        # print('new_samples: ', str(new_samples))
+        # print('list(new_samples): ', str(list(new_samples)))
 
         avg_dist_1 = 0 # prosjecna udaljenost nekog primjera od njegovih K najblizih susjeda u ORIGINALNOM datasetu
         avg_dist_2 = 0 # prosjecna udaljenost nekog primjera od njegovih K najblizih susjeda u GENERIRANOM datasetu
+        print('finding nearest neighbors...')
         for our_sample in EMB:
             n_neighbors = 5
 
             neighbors = NearestNeighbors(n_neighbors=n_neighbors, algorithm='ball_tree').fit(EMB)
-            distances, indices = neighbors.kneighbors(our_sample)
+            distances, indices = neighbors.kneighbors(our_sample.reshape(1, -1))
             dist_1 = np.sum(distances) / n_neighbors # prosjecna udaljenost naseg primjera od njegovih 5 najblizih susjeda iz ORIGINALNOG skupa
 
             neighbors = NearestNeighbors(n_neighbors=n_neighbors, algorithm='ball_tree').fit(new_samples)
-            distances, indices = neighbors.kneighbors(our_sample)
+            distances, indices = neighbors.kneighbors(our_sample.reshape(1, -1))
             dist_2 = np.sum(distances) / n_neighbors # prosjecna udaljenost naseg primjera od njegovih 5 najblizih susjeda iz GENERIRANOG skupa
 
             avg_dist_1 += dist_1
@@ -206,8 +213,8 @@ def create_folders_2(EMB, image_names = '', images_folder = ''):
     # make_folders(pred, datasetFolder, 'Clusters_GMM_3', fnames)  
 
 def create_folders(EMB, image_names = '', images_folder = ''):    
-    from sklearn.cluster import DBSCAN   
-    from sklearn.manifold import TSNE
+    # from sklearn.cluster import DBSCAN   
+    # from sklearn.manifold import TSNE
     
 
     # model = TSNE(init='pca', n_components=3, random_state=0, n_iter=310, perplexity=15, learning_rate=10, metric='cosine', method='exact', n_iter_without_progress=1000)    
@@ -277,15 +284,33 @@ def create_folders(EMB, image_names = '', images_folder = ''):
     # pca = PCA(n_components=3)
     # pca.fit(EMB)
     # print('PCA components: ' + str(pca.get_params())) 
-    print('fitting...')
-    dpgmm = mixture.BayesianGaussianMixture(n_components=12, covariance_type='full').fit(EMB)
-    print('predicting...')
-    pred = dpgmm.predict(EMB)
-    # print('precisions: ' + str(dpgmm.precisions_))
-    # print('len(pred): ' + str(pred))
-    print('pred: ' + str(pred))
-    print('done')
-    make_folders(pred, datasetFolder, 'Clusters_GMM_3', fnames)
+    dict_to_save = {'score' : [],
+                    'components' : [],
+                    'best_pred' : []}
+    i = 5
+    end = 0
+    while(end < 5):
+        print('fitting...')
+        dpgmm = mixture.BayesianGaussianMixture(n_components=i, covariance_type='full').fit(EMB)
+        print('predicting...')
+        new_pred = dpgmm.predict(EMB)
+        # print('precisions: ' + str(dpgmm.precisions_))
+        # print('len(pred): ' + str(pred))
+        print('pred: ' + str(pred))
+        print('done')
+        new_score = dpgmm.score(EMB)
+        dict_to_save['components'].append(i)
+        dict_to_save['score'].append(new_score)        
+        if new_score > last_score: 
+            end += 1 
+            dict_to_save['best_pred'] = last_pred
+        else:
+            last_score = new_score
+            last_pred = new_pred            
+        i += 1
+    np.save(str(len(EMB)), dict_to_save)
+
+    #make_folders(pred, datasetFolder, 'Clusters_GMM_3', fnames)
     # make_folders(clusters, datasetFolder, 'Clusters'+str(eps), fnames)
 
 
