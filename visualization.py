@@ -10,7 +10,7 @@ from scipy import spatial
 from sklearn import mixture
 from sklearn.decomposition import PCA
 
-import os
+import os, time
 
 from synset import *
 #from tsne import tsne
@@ -286,31 +286,39 @@ def create_folders(EMB, image_names = '', images_folder = ''):
     # print('PCA components: ' + str(pca.get_params())) 
     dict_to_save = {'score' : [],
                     'components' : [],
-                    'best_pred' : []}
+                    'best_pred' : [],
+                    'pred' : [],
+                    'seconds' : 0}
     i = 5
     end = 0
+    last_score = float('-inf')
+    last_pred = []
+    start_time = time.time()
     while(end < 5):
         print('fitting...')
         dpgmm = mixture.BayesianGaussianMixture(n_components=i, covariance_type='full').fit(EMB)
         print('predicting...')
         new_pred = dpgmm.predict(EMB)
         # print('precisions: ' + str(dpgmm.precisions_))
-        # print('len(pred): ' + str(pred))
-        print('pred: ' + str(pred))
-        print('done')
+        # print('len(pred): ' + str(pred))        
         new_score = dpgmm.score(EMB)
         dict_to_save['components'].append(i)
-        dict_to_save['score'].append(new_score)        
-        if new_score > last_score: 
+        dict_to_save['score'].append(new_score)   
+        dict_to_save['pred'].append(new_pred)   
+        print('score: ' + str(new_score))
+        print('done')  
+        #quit()   
+        if new_score < last_score: 
             end += 1 
             dict_to_save['best_pred'] = last_pred
         else:
             last_score = new_score
             last_pred = new_pred            
         i += 1
+    dict_to_save['seconds'] = time.time() - start_time
     np.save(str(len(EMB)), dict_to_save)
 
-    #make_folders(pred, datasetFolder, 'Clusters_GMM_3', fnames)
+    #make_folders(last_pred, datasetFolder, 'Clusters_GMM_3', fnames)
     # make_folders(clusters, datasetFolder, 'Clusters'+str(eps), fnames)
 
 
