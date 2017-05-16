@@ -308,7 +308,9 @@ def create_folders(EMB, image_names = '', images_folder = ''):
         print('score: ' + str(new_score))
         print('done')  
         #quit()   
-        if new_score < last_score: 
+        if end:
+            end += 1
+        elif new_score < last_score: 
             end += 1 
             dict_to_save['best_pred'] = last_pred
         else:
