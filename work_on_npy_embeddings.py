@@ -2,13 +2,14 @@ import numpy as np
 from visualization import create_folders, create_folders_2
 # from sklearn import mixture
 
-EMB = np.load('./tensorboard/embeddings_and_tensorboards/embeddings_2048_ResNet_101L.npy')[:]
-image_names = np.load('./tensorboard/embeddings_and_tensorboards/image_names_2048_ResNet_101L.npy')[:]
+EMB = np.load('./embeddings_2048_ResNet_101L.npy')[:]
+image_names = np.load('./image_names_2048_ResNet_101L.npy')[:]
 
 print (EMB)
 # #create_summary_embeddings(sess, images_list, image_names, EMB, '')
 
-for i in [1000,2000,3000,4000,5000,6000]
+#print(EMB.shape)
+for i in [1000,2000,3000,4000,5000,6000]:
 	create_folders(EMB[:i], image_names[:i], './datasetJPG/')
 create_folders(EMB[:], image_names[:], './datasetJPG/') # za sve slike 
 

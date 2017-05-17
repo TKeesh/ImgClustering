@@ -288,13 +288,13 @@ def create_folders(EMB, image_names = '', images_folder = ''):
                     'components' : [],
                     'best_pred' : [],
                     'pred' : [],
-                    'seconds' : 0}
+                    'seconds' : []}
     i = 5
     end = 0
     last_score = float('-inf')
     last_pred = []
-    start_time = time.time()
     while(end < 5):
+        start_time = time.time()
         print('fitting for {0} components'.format(str(i)))
         dpgmm = mixture.BayesianGaussianMixture(n_components=i, covariance_type='full').fit(EMB)
         print('predicting...')
@@ -305,8 +305,10 @@ def create_folders(EMB, image_names = '', images_folder = ''):
         dict_to_save['components'].append(i)
         dict_to_save['score'].append(new_score)   
         dict_to_save['pred'].append(new_pred)   
+        dict_to_save['seconds'].append(time.time()-start_time)
         print('score: ' + str(new_score))
-        print('done')  
+        print('time: ' + str(time.time()-start_time))
+        print()  
         #quit()   
         if end:
             end += 1
@@ -317,7 +319,6 @@ def create_folders(EMB, image_names = '', images_folder = ''):
             last_score = new_score
             last_pred = new_pred            
         i += 1
-    dict_to_save['seconds'] = time.time() - start_time
     np.save(str(len(EMB)), dict_to_save)
 
     #make_folders(last_pred, datasetFolder, 'Clusters_GMM_3', fnames)
