@@ -1,4 +1,4 @@
-from visualization_config import cfg
+from embeddings_processing_config import cfg
 
 import tensorflow as tf
 from tensorflow.contrib.tensorboard.plugins import projector
@@ -7,13 +7,19 @@ import numpy as np
 
 from glob import glob
 from scipy import spatial
-from sklearn import mixture
-from sklearn.decomposition import PCA
 
-import os, time
+import os, time, argparse
 
 from synset import *
-#from tsne import tsne
+
+from sklearn.manifold import TSNE
+from sklearn.cluster import DBSCAN
+import hdbscan
+
+
+
+precision_boost = False
+
 
 def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
     """
@@ -149,13 +155,88 @@ def make_folders(clusters, datasetFolder, extension, fnames):
         scipy.misc.imsave(os.path.join(folder + '\\' + str(clusters[imgi]) + '\\', imgorg.split('\\')[-1]), img)
     print ('Folders created')
 
-def create_folders_2(EMB, image_names = '', images_folder = ''):
+
+def connections_valid(clusters_of_clusters, clusters_mean):
+    import operator
+    connected = {}
+    for i in range(len(clusters_mean)):
+        avg_dist, br = 0, 0
+        for j in range(len(clusters_mean)):
+            if j <= i: continue
+            # print (i, j)
+            # result = spatial.distance.cosine(clusters_mean[i], clusters_mean[j])
+            # print("kosinusna_1008: " + str(result))
+            if clusters_of_clusters[i] == clusters_of_clusters[j]:
+                #connected.append([i, j, spatial.distance.cosine(clusters_mean[i], clusters_mean[j])]) 
+                avg_dist += spatial.distance.cosine(clusters_mean[i], clusters_mean[j])
+                br += 1
+        if br > 0:
+            avg_dist /= br
+            connected[i] = avg_dist
+    #quit()
+    #connected = np.array(connected)
+    print (connected)
+
+    if connected[max(connected, key=connected.get)] > 0.4: 
+        return (False, connected)
+    return (True, connected)
+
+
+def fix_connected(connected, clusters_of_clusters):
+    for i,c in enumerate(clusters_of_clusters):
+        if i in connected.keys():
+            if connected[i] > 0.4:
+                clusters_of_clusters[i] = max(clusters_of_clusters) + 1
+    return clusters_of_clusters
+
+
+def nearest_neighbours(EMB, classes, image_names):
+    from sklearn.neighbors import KNeighborsClassifier
     from sklearn.neighbors import NearestNeighbors
 
+    EMB_correct = np.array([x for i, x in enumerate(EMB) if classes[i] >= 0])
+    classes_correct = np.array([classes[i] for i, x in enumerate(EMB) if classes[i] >= 0])
+    image_names_correct = np.array([image_names[i] for i, x in enumerate(EMB) if classes[i] >= 0])
+
+    EMB_noise = np.array([x for i, x in enumerate(EMB) if classes[i] == -1])
+    image_names_noise = np.array([image_names[i] for i, x in enumerate(EMB) if classes[i] == -1])
+
+    n_neighbors = int(np.sqrt(len(classes)/(max(classes)+1)))
+    neigh = KNeighborsClassifier(n_neighbors=n_neighbors, algorithm='auto').fit(EMB_correct, classes_correct)
+
+    classes_noise = neigh.predict(EMB_noise)
+
+    # nbrs = NearestNeighbors(n_neighbors=n_neighbors, algorithm='auto').fit(EMB_correct)
+    # br = 0
+    # distances, indices = nbrs.kneighbors(EMB_noise)
+    # for i in range(len(distances)):
+    #     distance, indice = distances[i], indices[i]
+    #     print (image_names_noise[br])
+    #     br += 1
+    #     for j, ind in enumerate(indice):
+    #         print(image_names_correct[ind], classes_correct[ind], distance[j])
+
+    return classes_noise, image_names_noise
+
+
+def nearest_neighbours2(EMB, classes, clusters_mean, clusters_classes, image_names):
+    from sklearn.neighbors import KNeighborsClassifier
+
+    EMB_noise = np.array([x for i, x in enumerate(EMB) if classes[i] == -1])
+    image_names_noise = np.array([image_names[i] for i, x in enumerate(EMB) if classes[i] == -1])
+
+    neigh = KNeighborsClassifier(n_neighbors=1).fit(clusters_mean, clusters_classes)
+
+    classes_noise = neigh.predict(EMB_noise)
+
+    return classes_noise, image_names_noise
+
+
+def create_folders(EMB, image_names = '', images_folder = ''):    
     if len(images_folder): 
         datasetFolder = images_folder
     else: 
-        datasetFolder = cfg.TRAIN_FOLDER
+        datasetFolder = cfg.DATASET_FOLDER
     if len(image_names): 
         fnames = image_names
     else: 
@@ -165,214 +246,38 @@ def create_folders_2(EMB, image_names = '', images_folder = ''):
         fnames = [x.decode('UTF-8') for x in fnames]
     except: pass
 
-    for n_components in range(7, 15):
-    # for n_components in [12]:
-        
-        print('fitting...')
-        dpgmm = mixture.BayesianGaussianMixture(n_components=12, covariance_type='full').fit(EMB)
-        
-        print('predicting...')
-        pred = dpgmm.predict(EMB)
+    start_time = time.time()
 
-        print('sampling...')
-        new_samples = np.array(dpgmm.sample(EMB.shape[0])[0]) # iz dobivenih gaussova sempliram nove podatke koje cu usporedivati sa nasim podacima
+         
+    print ('HDBSCAN fit...')
+    min_cluster_size = int(len(EMB) / 100)
+    clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples = 2).fit(EMB) # za soft_clustering: , prediction_data=True
+    clusters = clusterer.labels_
+    print ('HDBSCAN done')
 
-        # print('new_samples: ', str(new_samples))
-        # print('list(new_samples): ', str(list(new_samples)))
-
-        avg_dist_1 = 0 # prosjecna udaljenost nekog primjera od njegovih K najblizih susjeda u ORIGINALNOM datasetu
-        avg_dist_2 = 0 # prosjecna udaljenost nekog primjera od njegovih K najblizih susjeda u GENERIRANOM datasetu
-        print('finding nearest neighbors...')
-        for our_sample in EMB:
-            n_neighbors = 5
-
-            neighbors = NearestNeighbors(n_neighbors=n_neighbors, algorithm='ball_tree').fit(EMB)
-            distances, indices = neighbors.kneighbors(our_sample.reshape(1, -1))
-            dist_1 = np.sum(distances) / n_neighbors # prosjecna udaljenost naseg primjera od njegovih 5 najblizih susjeda iz ORIGINALNOG skupa
-
-            neighbors = NearestNeighbors(n_neighbors=n_neighbors, algorithm='ball_tree').fit(new_samples)
-            distances, indices = neighbors.kneighbors(our_sample.reshape(1, -1))
-            dist_2 = np.sum(distances) / n_neighbors # prosjecna udaljenost naseg primjera od njegovih 5 najblizih susjeda iz GENERIRANOG skupa
-
-            avg_dist_1 += dist_1
-            avg_dist_2 += dist_2
-
-        avg_dist_1 /= EMB.shape[0]
-        avg_dist_2 /= EMB.shape[0]
-
-        difference = np.absolute(avg_dist_1 - avg_dist_2)
-
-        # ovo nas najvise zanima jer ako su izracunati gaussovi stvarno tocni, onda bi semplirani podaci trebali biti slicni originalnim podacima
-        # pa bi ova razlika trebala biti mala, dok bi u protivnom ta razlika trebala biti veca
-        # nadamo se da ce za n_components = 12 ispasti da je ta razlika najmanja, ili mozda da tad padne za veliki iznos ili tak nes
-        print('n_components: ' + str(n_components))
-        print('difference of original and sampled datasets: ' + str(difference))
-
-        # print('pred: ' + str(pred))
-
-    print('done')
-
-    # make_folders(pred, datasetFolder, 'Clusters_GMM_3', fnames)  
-
-def connections_valid(clusters_of_clusters, clusters_1000_mean):
-    for i in range(len(clusters_1000_mean)):
-        for j in range(len(clusters_1000_mean)):
-            if j <= i: continue
-            print (i, j)
-            result = 1 - spatial.distance.cosine(clusters_1000_mean[i], clusters_1000_mean[j])
-            print("kosinusna_1008: " + str(result))
-    return 0
+    make_folders(clusters, datasetFolder, 'ClustersHDBSCAN', fnames)
 
 
-def create_folders(EMB, EMB1000 = None, image_names = '', images_folder = ''):    
-    if len(images_folder): 
-        datasetFolder = images_folder
-    else: 
-        datasetFolder = cfg.TRAIN_FOLDER
-    if len(image_names): 
-        fnames = image_names
-    else: 
-        fnames = os.listdir(images_folder)
-        fnames.sort()
-    try: 
-        fnames = [x.decode('UTF-8') for x in fnames]
-    except: pass
-
-    from sklearn.manifold import TSNE
-    # model = TSNE(init='pca', n_components=3, random_state=0, n_iter=600, perplexity=10, learning_rate=75, metric='cosine', method='exact', n_iter_without_progress=1000)    
-    # np.set_printoptions(suppress=True)
-    # print("TSNEfit")    
-    # mat2D = model.fit_transform(EMB) 
-    # from mpl_toolkits.mplot3d import Axes3D
-    # import matplotlib.pyplot as plt
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(mat2D[:,0], mat2D[:,1], mat2D[:,2], c='r')
-    # fig.savefig('./TSNEplot.png')
-    # print ('TSNE figure saved')
-    
-
-    #mat2D = tsne(X = EMB.astype('float64'), no_dims = 3, initial_dims = len(EMB[0]), perplexity = 5.0)
-    
-    #print(mat2D.shape)
-
-    # maxx = np.max(mat2D[:, 0])
-    # minx = np.min(mat2D[:, 0])
-
-    # maxy = np.max(mat2D[:, 1])
-    # miny = np.min(mat2D[:, 1])
-
-    # maxz = np.max(mat2D[:, 2])
-    # minz = np.min(mat2D[:, 2])
-
-    # print("maxx = " + str(maxx))
-    # print("minx = " + str(minx))
-    # print("maxy = " + str(maxy))
-    # print("miny = " + str(miny))
-    # print("maxz = " + str(maxz))
-    # print("minz = " + str(minz))
-    # eps = np.maximum(np.maximum(maxx-minx, maxy-miny), maxz-minz) / 10.0
-    # eps = ((maxx-minx) + (maxy-miny) + (maxz-minz)) / 3.0 * 490000 / len(EMB) / len(EMB) / len(EMB)
-    # print ('eps = ', eps)
-
-    
-    
-    #mat2D = mat2D.transpose() 
-    # print (type(mat2D), mat2D.shape)
-
-    from sklearn.cluster import DBSCAN 
-    # clusters = [len(EMB)+1]
-    # eps = 0.05
-    # while(max(clusters)+1 > 9): #< 8 or max(clusters)+1 > 14
-    #     clusters = DBSCAN(eps=eps, algorithm='ball_tree', min_samples=5, metric='euclidean').fit_predict(mat2D)
-    #     #clusters = DBSCAN(eps=eps, algorithm='brute', min_samples=1, metric='cosine').fit_predict(EMB).flatten()        
-    #     print ('clusters: ', max(clusters)+1)
-    #     print ('eps: ', eps)
-    #     eps += 0.05
-    # eps -= 0.05
-    # make_folders(clusters, datasetFolder, 'Clusters'+str(eps), fnames)
-
-    import hdbscan
-    clusterer = hdbscan.HDBSCAN(min_cluster_size=10, min_samples = 2, prediction_data=True)
-    clusters = clusterer.fit(EMB)
-    soft_clusters = hdbscan.all_points_membership_vectors(clusters)
-    make_folders(soft_clusters, datasetFolder, 'ClustersHDBSCAN', fnames)
-
-    quit()
-    
-  
-    # pca = PCA(n_components=3)
-    # pca.fit(EMB)
-    # print('PCA components: ' + str(pca.get_params())) 
-
-    
-    # dict_to_save = {'score' : [],
-    #                 'components' : [],
-    #                 'best_pred' : [],
-    #                 'pred' : [],
-    #                 'seconds' : 0}
-    # i = 5
-    # end = 0
-    # last_score = float('-inf')
-    # last_pred = []
-    # start_time = time.time()
-    # while(end < 5):
-    #     print('fitting for {0} components'.format(str(i)))
-    #     dpgmm = mixture.BayesianGaussianMixture(n_components=i, covariance_type='full').fit(mat2D)
-    #     print('predicting...')
-    #     new_pred = dpgmm.predict(mat2D)
-    #     #print('precisions: ' + str(dpgmm.precisions_))
-    #     # print('len(pred): ' + str(pred))        
-    #     new_score = dpgmm.score(mat2D)
-    #     dict_to_save['components'].append(i)
-    #     dict_to_save['score'].append(new_score)   
-    #     dict_to_save['pred'].append(new_pred)   
-    #     print('score: ' + str(new_score))
-    #     print('done') 
-    #     # print (time.time() - start_time)
-    #     # quit()   
-    #     if end:
-    #         end += 1
-    #     elif new_score < last_score: 
-    #         end += 1 
-    #         dict_to_save['best_pred'] = last_pred
-    #     else:
-    #         last_score = new_score
-    #         last_pred = new_pred            
-    #     i += 1
-    # dict_to_save['seconds'] = time.time() - start_time
-    # np.save(str(len(EMB)), dict_to_save)
-    
-    # print (dict_to_save['best_pred'])
-    # make_folders(dict_to_save['best_pred'], datasetFolder, 'Clusters_GMM_3', fnames)
-
-
+    mat2D=EMB
+    if precision_boost:
+        print ('TSNE fit...')
+        model = TSNE(init='pca', n_components=3, random_state=0, n_iter=300, perplexity=15, learning_rate=150, metric='cosine', method='exact', n_iter_without_progress=1000)    
+        mat2D = model.fit_transform(EMB) 
+        print ('TSNE done')
 
 
     clusters_mean = np.zeros((max(clusters)+1, len(EMB[0])))
-    clusters_1000_mean = np.zeros((max(clusters)+1, len(EMB1000[0])))
     clusters_examples = np.zeros((max(clusters)+1, 1))
     for i, c in enumerate(clusters):
         if c < 0: 
             continue
         clusters_mean[c] += EMB[i]
-        clusters_1000_mean[c] += EMB1000[i]
-        clusters_examples += 1
+        clusters_examples[c] += 1
     for i in range(len(clusters_mean)):
         clusters_mean[i] /= clusters_examples[i]
-        clusters_1000_mean[i] /= clusters_examples[i]
-
-    # for i, c in enumerate(clusters):
-    #     if c < 0: 
-    #         find_cluster()
 
     print ('len of clusters_mean:', len(clusters_mean))
 
-    # clusterer = hdbscan.HDBSCAN(min_cluster_size=2, min_samples = 2, prediction_data=True)
-    # clusters_of_clusters = clusterer.fit_predict(clusters_mean)
-    # print (clusters_of_clusters)
-    # clusters_of_clusters = [clusters_of_clusters[c] if c > 0 else -1 for c in clusters]
-    # make_folders(clusters_of_clusters, datasetFolder, 'HDBSCAN2', fnames)
 
     number_of_clusters = max(clusters) + 1
     eps = 0.1
@@ -381,14 +286,15 @@ def create_folders(EMB, EMB1000 = None, image_names = '', images_folder = ''):
     while(1):
         clusters_of_clusters = DBSCAN(eps=eps, algorithm='brute', min_samples=1, metric='cosine').fit_predict(clusters_mean)
         print(clusters_of_clusters)
-        eps += 0.1
-        if not connections_valid(clusters_of_clusters, clusters_mean): 
-            break
+        # eps += 0.1
+        # if not connections_valid(clusters_of_clusters, clusters_mean): 
+        #     break
         #quit()
         if max(clusters_of_clusters) + 1 == number_of_clusters and not start:
             eps += 0.1
+            possible_connections.append(clusters_of_clusters)
             continue
-        elif max(clusters_of_clusters) + 1 == number_of_clusters or max(clusters_of_clusters) + 1 < number_of_clusters * 0.6: 
+        elif max(clusters_of_clusters) + 1 == number_of_clusters or max(clusters_of_clusters) + 1 < number_of_clusters * 0.65 or not connections_valid(clusters_of_clusters, clusters_mean)[0]: 
             break
         else:
             start = True
@@ -396,97 +302,59 @@ def create_folders(EMB, EMB1000 = None, image_names = '', images_folder = ''):
             possible_connections.append(clusters_of_clusters)
             eps += 0.1
 
+    cv = connections_valid(clusters_of_clusters, clusters_mean)
+    if not cv[0] and not max(clusters_of_clusters) + 1 < number_of_clusters * 0.65:
+        final_clusters = fix_connected(cv[1], clusters_of_clusters)
+    else:
+        final_clusters = possible_connections[-1]
+    print ('FINAL: ', final_clusters)
+    clusters = [final_clusters[c] if c >= 0 else c for c in clusters]
+   
+    #classes_noise, image_names_noise = nearest_neighbours(mat2D, clusters, image_names)
+    classes_noise, image_names_noise = nearest_neighbours2(mat2D, clusters, clusters_mean, final_clusters, image_names)
+    br = 0
+    for i, c in enumerate(clusters):
+        if c < 0:
+            clusters[i] = classes_noise[br]
+            br += 1
+    clusters = [final_clusters[c] for c in clusters]
+    make_folders(clusters, datasetFolder, 'NOVOOOOO', fnames)
+
+    print (time.time() - start_time)
 
 
-    # result = 1 - spatial.distance.cosine(EMB[1], EMB[3])
-    # print("kosinusna_1008: " + str(result))
-    # result = np.linalg.norm(EMB[1]-EMB[3])
-    # print("euklidna_1008: " + str(result))
-
-    # result = 1 - spatial.distance.cosine(mat2D[1], mat2D[3])
-    # print("kosinusna_3: " + str(result))
-    # result = np.linalg.norm(mat2D[1]-mat2D[3])
-    # print("euklidna_3: " + str(result))
-
-    # model = TSNE(init='pca', n_components=3, random_state=0, n_iter=600, perplexity=10, learning_rate=75, metric='cosine', method='exact', n_iter_without_progress=1000)
-    # print (clusters_mean.shape)
-    # mat2D = model.fit_transform(clusters_mean) 
-    # from mpl_toolkits.mplot3d import Axes3D
-    # import matplotlib.pyplot as plt
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(mat2D[:,0], mat2D[:,1], mat2D[:,2], c='r')
-    # fig.savefig('./TSNEplot2.png')
-    # print ('TSNE figure saved')
-    # clusterer = hdbscan.HDBSCAN(min_cluster_size=2, min_samples = 2, prediction_data=True)
-    # clusters_of_clusters = clusterer.fit_predict(mat2D)
-    # print (clusters_of_clusters)
-    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    # make_folders(clusters_of_clusters, datasetFolder, 'HDBSCAN2', fnames)
-
-    # clusters_of_clusters = DBSCAN(eps=1.5, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
-    # # print(clusters_of_clusters)
-    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    # make_folders(clusters_of_clusters, datasetFolder, '1_5', fnames)
-    # clusters_of_clusters = DBSCAN(eps=2, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
-    # # print(clusters_of_clusters)
-    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    # make_folders(clusters_of_clusters, datasetFolder, '2', fnames)
-    # clusters_of_clusters = DBSCAN(eps=2.5, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
-    # # print(clusters_of_clusters)
-    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    # make_folders(clusters_of_clusters, datasetFolder, '2_5', fnames)
-    # clusters_of_clusters = DBSCAN(eps=3, algorithm='ball_tree', min_samples=1, metric='euclidean').fit_predict(mat2D)
-    # # print(clusters_of_clusters)
-    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    # make_folders(clusters_of_clusters, datasetFolder, '3', fnames)
-
-
-'''
-    for i in range(len(EMB[1])):
-        p = 1.0/(1+np.exp(EMB[1][i]))
-        print('*'*round(p*20))
-        p = 1.0/(1+np.exp(EMB[3][i]))
-        print('*'*round(p*20))
-        print()
-'''
-
-
-    # for x in EMB[1]:
-    #     print(1.0/(1+np.exp(x)))
-    # for x in EMB[3]:
-    #     print(1.0/(1+np.exp(x)))
-    # DBSCAN(cosine), nad clusters_mend(EMB), nakon TSNE-DBSCAN(euclidean) ne valja !!!
-
-    # clusters_of_clusters = DBSCAN(eps=0.1, algorithm='brute', min_samples=1, metric='cosine').fit_predict(clusters_mean)
-    # print(clusters_of_clusters)
-    # clusters_of_clusters = DBSCAN(eps=0.2, algorithm='brute', min_samples=1, metric='cosine').fit_predict(clusters_mean)
-    # print(clusters_of_clusters)
-    # clusters_of_clusters = DBSCAN(eps=0.3, algorithm='brute', min_samples=1, metric='cosine').fit_predict(clusters_mean)
-    # print(clusters_of_clusters)
-    # clusters_of_clusters = DBSCAN(eps=0.4, algorithm='brute', min_samples=1, metric='cosine').fit_predict(clusters_mean)
-    # print(clusters_of_clusters)
-    # clusters_of_clusters = DBSCAN(eps=0.5, algorithm='brute', min_samples=1, metric='cosine').fit_predict(clusters_mean)
-    # print(clusters_of_clusters)
-    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    # make_folders(clusters_of_clusters, datasetFolder, '0_5', fnames)
-    # clusters_of_clusters = DBSCAN(eps=0.6, algorithm='brute', min_samples=1, metric='cosine').fit_predict(clusters_mean)
-    # print(clusters_of_clusters)
-    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    # make_folders(clusters_of_clusters, datasetFolder, '0_6', fnames)
-    # clusters_of_clusters = DBSCAN(eps=0.7, algorithm='brute', min_samples=1, metric='cosine').fit_predict(clusters_mean)
-    # print(clusters_of_clusters)
-    # clusters_of_clusters = [clusters_of_clusters[c] for c in clusters]
-    # make_folders(clusters_of_clusters, datasetFolder, '0_7', fnames)
 
 
 if __name__ == '__main__':
-    number_of_images = 1000
-    EMB1000 = np.load('./tensorboard/embeddings_and_tensorboards/embeddings_1000_ResNet_101L.npy')[:number_of_images]
-    EMB2048 = np.load('./tensorboard/embeddings_and_tensorboards/embeddings_2048_ResNet_101L.npy')[:number_of_images]
+    parser = argparse.ArgumentParser("Analyses embeddings from npy (embeddings represents images).")
+        
+    parser.add_argument("embeddings_path", type=str, help="path to embeddings.npy (image_names.npy must be next to it)", nargs=1)
+    parser.add_argument("imagesFolder", type=str, help="folder with images", nargs=1)
+
+    parser.add_argument("-n", help="number of images to analyse", type=int, nargs=1)
+
+    parser.add_argument("--p", action="store_true", help="precision_boost - improves precision of noise clustering, increases execution time")
+
+    args = parser.parse_args()  
+    
+    if len(args.imagesFolder) == 0:
+        dataset_folder = cfg.
+
+    if args.p:  
+        print("Method: precision_boost")
+        precision_boost = True
+    if args.n:  
+        print("Analyzing {0} images".format(str(n)))
+        number_of_images = args.n[0]
+
+    #dodati da ostavlja nesigurni sum vani
+
+    EMB = np.load('./tensorboard/embeddings_and_tensorboards/embeddings_2048_ResNet_101L.npy')[:number_of_images]
+    # EMB = np.load('./tensorboard/embeddings_test_2048_ResNet-L101.npy')[:number_of_images]
     image_names = np.load('./tensorboard/embeddings_and_tensorboards/image_names_2048_ResNet_101L.npy')[:number_of_images]
+    # image_names = np.load('./tensorboard/image_names_test_2048_ResNet-L101.npy')[:number_of_images]
 
     print ('Embeddings and image names loaded.')
     # #create_summary_embeddings(sess, images_list, image_names, EMB, '')
 
-    create_folders(EMB2048, EMB1000, image_names, './datasetJPG/') # za sve slike 
+    create_folders(EMB, image_names, './datasetJPG/') # za sve slike 
