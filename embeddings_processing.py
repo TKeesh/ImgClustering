@@ -9,8 +9,8 @@ precision_boost = False
 
 
 def create_summary_embeddings(sess, images, image_names, EMB1, EMB2, LOG_DIR):
-    from synset import *
 
+    import synset
     import tensorflow as tf
     from tensorflow.contrib.tensorboard.plugins import projector
 
