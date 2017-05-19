@@ -1,5 +1,7 @@
 ## Mozgalo2017 - Unsupervised content based image clustering
 
+By Paolo Čerić and Tomislav Kiš
+
 ### Requirements
 
 1. Installed python3.5 (recommended Anaconda3.5) with following packages: `tensorflow`, `opencv`, `sklearn`, `hdbscan`, `easydict`
