@@ -3,6 +3,7 @@ from embeddings_processing_config import cfg
 from scipy import spatial
 import scipy.misc
 import numpy as np
+
 import os, time, argparse
 
 precision_boost = False
