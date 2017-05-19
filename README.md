@@ -13,7 +13,7 @@
 3. Extract all the files into `./models/`
 
 ### Generating embeddings for images:
-  1. 
+  1. Executing:
   ```Shell
   python forward_resnet.py
   ```
@@ -23,10 +23,12 @@
 
   After this you will get `./output/` folder with `embedding_data.npy` and `image_names_data.npy`
 
-  2.
-  Visualizing tensorboard if created:
+  2. Visualizing tensorboard if created:
   ```Shell
   tensorboard --logdir tensorboard/test_data
   ```
+
+ ### bla
+   1. 
 
 
