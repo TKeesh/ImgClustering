@@ -18,7 +18,9 @@ python data_preprocessing.py input_dir output_dir
 
 
 1. Place `.jpg` images into `./data/` folder
+
 2. Download pretrained model from `tensorflow-resnet-pretrained-20160509.tar.gz.torrent`
+
 3. Extract all the files into `./models/`
 
 ### Generating embeddings for images
@@ -68,7 +70,8 @@ python data_preprocessing.py input_dir output_dir
     ```Shell
     python embeddings_processing.py -embspath './output/embeddings_data_0.npy'
     ```
-    If using `--cf` all Mozgalo2017_dataset images must be in `./data/` or in custom folder specified with `-imgspath`. Output: `./output/DATA_embeddings`
+    If using `--cf` all Mozgalo2017_dataset images must be in `./data/` or in custom folder specified with `-imgspath`. 
+    Output: `./output/DATA_embeddings`, DATA calculated from imgspath folder
 
 
 
