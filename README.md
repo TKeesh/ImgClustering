@@ -24,10 +24,9 @@ python data_preprocessing.py input_dir output_dir
 1. Place `.jpg` images into `./data/` folder
 
 2. Download pretrained model from `tensorflow-resnet-pretrained-20160509.tar.gz.torrent`
+    If you want to retrain your own model please refer to: `https://github.com/ry/tensorflow-resnet`
 
 3. Extract all the files into `./models/`
-
-If you want to retrain your own model please refer to: `https://github.com/ry/tensorflow-resnet`
 
 ### Generating embeddings for images
 1. Executing:
