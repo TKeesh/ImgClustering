@@ -1,6 +1,6 @@
 ## Mozgalo2017 - Unsupervised content based image clustering
 
-By Paolo Čerić and Tomislav Kiš
+
 
 ### Requirements
 
