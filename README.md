@@ -1,4 +1,4 @@
-### Requirements:
+### Requirements
 
 1. Installed python3.5 (recommended Anaconda3.5) with following packages: `tensorflow`, `opencv`, `sklearn`, `hdbscan`, `easydict`
 
@@ -7,12 +7,13 @@
     pip install --upgrade -r requirements.txt
     ```
 
-### Setting up data:
-1. Place images into `./data/ folder`
+### Setting up data
+You can use our `data_preprocessing.py` script to change dataset to `.jpg` or make some image transformations which are not crucial
+1. Place `.jpg` images into `./data/ folder`
 2. Download pretrained model from `ensorflow-resnet-pretrained-20160509.tar.gz.torrent`
 3. Extract all the files into `./models/`
 
-### Generating embeddings for images:
+### Generating embeddings for images
 1. Executing:
     ```Shell
     python forward_resnet.py
@@ -21,14 +22,46 @@
 
     **Note:** If you want to see embeddings in tensorboard, execute with parametar ```--tb```
 
-    After this you will get `./output/` folder with `embedding_data.npy` and `image_names_data.npy`
+    After this you will get `./output/` folder with `embeddings_data.npy` and `image_names_data.npy`
+
+If you want to skip this step you can use our `*.npy` files from this commit for **Mozgalo2017_dataset**
 
 2. Visualizing tensorboard if created:
     ```Shell
     tensorboard --logdir tensorboard/test_data
     ```
 
- ### bla
-    1. 
+### Analyzing embeddings and creating clusters
+
+1. Working on generated (`./output/embeddings_data.*`) embeddings:
+    ```Shell
+    python embeddings_processing.py
+    ```
+Use the parametar `-n` to set the number of embeddings to work on ( <= number of images in data folder )
+
+2. Create folders with clustered dataset:
+    `--cf`
+    Folders with cluster indices will be created in `./output/data_embeddings`
+
+3. Precission boost method:
+    `--p` - with TSNE boosts precission of noise images clustering, executes much slower
+    Optional method which is significantly slower and only a bit more accurate
+
+4. Adjust algoritham to work on specific datasets:
+    `-mcs` - set the minimum cluster size which algoritham finds
+
+Working on **Mozgalo2017_dataset** embeddings:
+    ```Shell
+    python embeddings_processing.py -embspath './output/embeddings_data_0.npy'
+    ```
+    `-n` - <= 6889
+    `--cf` - `./output/DATA_embeddings`
+    If using `--cf` all Mozgalo2017_dataset images must be in `./data/` or in custom folder specified with `-imgspath`
+
+
+
+
+
+    
 
 
