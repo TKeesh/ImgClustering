@@ -27,6 +27,8 @@ python data_preprocessing.py input_dir output_dir
 
 3. Extract all the files into `./models/`
 
+If you want to retrain your own model please refer to: `https://github.com/ry/tensorflow-resnet`
+
 ### Generating embeddings for images
 1. Executing:
     ```Shell
