@@ -4,7 +4,7 @@ By Paolo Čerić and Tomislav Kiš
 
 ### Requirements
 
-1. Installed python3.5 (recommended Anaconda3.5) with following packages: `tensorflow`, `opencv`, `sklearn`, `hdbscan`, `easydict`
+1. Installed Python3.5 (recommended Anaconda3.5) with following packages: `tensorflow`, `opencv`, `sklearn`, `hdbscan`, `easydict`
 
     **Note:** All required packages are listed in requirements.txt. You can try to execute:
     ```Shell
