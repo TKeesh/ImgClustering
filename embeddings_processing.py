@@ -8,7 +8,6 @@ from synset import *
 
 import os, time, argparse
 
-precision_boost = False
 
 
 def create_summary_embeddings(sess, images, image_names, EMB1, EMB2, LOG_DIR):
@@ -63,7 +62,7 @@ def create_summary_embeddings(sess, images, image_names, EMB1, EMB2, LOG_DIR):
     # write metadata
     metadata_file = open(os.path.join(LOG_DIR, 'metadata.tsv'), 'w')
     metadata_file.write('Name\tClass\n')
-    cnf = open(os.path.join('./', 'classes.txt'), 'w')
+    cnf = open(os.path.join('./output/', 'top_classes.txt'), 'w')
     for i, name in enumerate(image_names):
         prob = EMB1[i]
         pred = np.argsort(prob)[::-1]
@@ -117,7 +116,7 @@ def _images_to_sprite(data):
 def make_folders(clusters, datasetFolder, extension, fnames):    
     from glob import glob
 
-    folder = './' + os.path.split(datasetFolder.strip('/').strip('\\').strip('\\\\').strip('//'))[-1] + extension
+    folder = './output/' + os.path.split(datasetFolder.strip('/').strip('\\').strip('\\\\').strip('//'))[-1] + extension
     print ('Creating folders with clusters ({0})...'.format(folder))
     # datasetFolder = datasetFolder.strip('.').strip('/')
     # outFile = open(datasetFolder+'.txt','w')
@@ -137,9 +136,6 @@ def make_folders(clusters, datasetFolder, extension, fnames):
         imgorg = glob(os.path.join(datasetFolder, fnames[imgi].split('.')[0]) + '.*')[0]
         try: img = (scipy.misc.imread(imgorg)[:,:,:3]).astype('float32')
         except: img = (scipy.misc.imread(imgorg)[:]).astype('float32')
-        # print(os.path.join(out_folder, os.path.split(imgorg)[-1]))
-        # print(img.shape)
-        # os.chdir(os.path.dirname(__file__))
         scipy.misc.imsave(os.path.join(out_folder, os.path.split(imgorg)[-1]), img)
     print ('Folders created')
 
@@ -171,11 +167,26 @@ def connections_valid(clusters_of_clusters, clusters_mean):
     return (True, connected)
 
 
-def fix_connected(connected, clusters_of_clusters):
+def fix_connected(connected, clusters_of_clusters, previous_clusters):
+    idx = []
     for i,c in enumerate(clusters_of_clusters):
         if i in connected.keys():
             if connected[i] > 0.4:
                 clusters_of_clusters[i] = max(clusters_of_clusters) + 1
+                idx.append(i)
+
+    for i, ii in enumerate(idx[:-1]):
+        for ij in idx[i+1:]:
+            if previous_clusters[ii] == previous_clusters[ij]:
+                clusters_of_clusters[ij] = clusters_of_clusters[ii]
+
+    tmp = []
+    for c in clusters_of_clusters:
+        if c not in tmp: tmp.append(c)
+    tmp.sort()
+    for i, c in enumerate(clusters_of_clusters):
+        clusters_of_clusters[i] = tmp.index(c)
+
     return clusters_of_clusters
 
 
@@ -216,12 +227,12 @@ def nearest_neighbours2(EMB, classes, clusters_mean, clusters_classes, image_nam
 
     neigh = KNeighborsClassifier(n_neighbors=1).fit(clusters_mean, clusters_classes)
 
-    classes_noise = neigh.predict(EMB_noise)
+    classes_noise = neigh.predict(EMB_noise)    
 
     return classes_noise, image_names_noise
 
 
-def analyze_embeddings(EMB, image_names = ''):    
+def analyze_embeddings(EMB, image_names = '', precision_boost=False, mcs=0):    
 
     from sklearn.manifold import TSNE
     from sklearn.cluster import DBSCAN
@@ -238,31 +249,49 @@ def analyze_embeddings(EMB, image_names = ''):
          
     print ('HDBSCAN fit...')
     min_cluster_size = int(len(EMB) / 100)
-    if min_cluster_size < 2:
+    if len(EMB) < 500 and len(EMB) >= 100:
+        min_cluster_size = 5
+    if len(EMB) < 100 and len(EMB) >= 41:
+        min_cluster_size = np.ceil(len(EMB)/20)
+    if len(EMB) < 41 and len(EMB) >= 20:
+        min_cluster_size = 3
+    if len(EMB) < 20:
         min_cluster_size = 2
+    
+    if mcs > 0:
+        min_cluster_size = mcs
+
     clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples = 2).fit(EMB) # za soft_clustering: , prediction_data=True
     clusters = clusterer.labels_
+    clusters0 = list(clusters)
     print ('HDBSCAN done')
+
+    if max(clusters)+1 == 0: 
+        print ('ERROR: no clusters found, probably dataset is too small')
+        quit()        
 
     # make_folders(clusters, datasetFolder, 'ClustersHDBSCAN', fnames)
 
     mat2D=EMB
     if precision_boost:
         print ('TSNE fit...')
-        model = TSNE(init='pca', n_components=3, random_state=0, n_iter=300, perplexity=15, learning_rate=150, metric='cosine', method='exact', n_iter_without_progress=1000)    
+        model = TSNE(init='pca', n_components=3, random_state=0, n_iter=310, perplexity=15, learning_rate=150, metric='cosine', method='exact', n_iter_without_progress=1000)    
         mat2D = model.fit_transform(EMB) 
         print ('TSNE done')
 
 
     clusters_mean = np.zeros((max(clusters)+1, len(EMB[0])))
+    clusters_mean_TSNE = np.zeros((max(clusters)+1, len(mat2D[0])))
     clusters_examples = np.zeros((max(clusters)+1, 1))
     for i, c in enumerate(clusters):
         if c < 0: 
             continue
         clusters_mean[c] += EMB[i]
+        clusters_mean_TSNE[c] += mat2D[i]
         clusters_examples[c] += 1
     for i in range(len(clusters_mean)):
         clusters_mean[i] /= clusters_examples[i]
+        clusters_mean_TSNE /= clusters_examples[i]
 
     print ('len of clusters_mean:', len(clusters_mean))
 
@@ -292,14 +321,23 @@ def analyze_embeddings(EMB, image_names = ''):
 
     cv = connections_valid(clusters_of_clusters, clusters_mean)
     if not cv[0] and not max(clusters_of_clusters) + 1 < number_of_clusters * 0.65:
-        final_clusters = fix_connected(cv[1], clusters_of_clusters)
+        final_clusters = fix_connected(cv[1], clusters_of_clusters, possible_connections[-1])
     else:
         final_clusters = possible_connections[-1]
     print ('FINAL: ', final_clusters)
     clusters = [final_clusters[c] if c >= 0 else c for c in clusters]
    
-    #classes_noise, image_names_noise = nearest_neighbours(mat2D, clusters, image_names)
-    classes_noise, image_names_noise = nearest_neighbours2(mat2D, clusters, clusters_mean, final_clusters, image_names)
+    if precision_boost:
+        classes_noise, image_names_noise = nearest_neighbours(mat2D, clusters, image_names)
+    else:
+        classes_noise, image_names_noise = nearest_neighbours2(EMB, clusters, clusters_mean, final_clusters, image_names)    
+    
+    # diff = [a_i - b_i for a_i, b_i in zip(classes_noise_BLA, classes_noise)]
+    # for i,x in enumerate(diff):
+    #     if x != 0:
+    #         print (image_names_noise[i])
+    #         print (classes_noise[i], classes_noise_BLA[i])
+
     br = 0
     for i, c in enumerate(clusters):
         if c < 0:
@@ -307,45 +345,78 @@ def analyze_embeddings(EMB, image_names = ''):
             br += 1
     clusters = [final_clusters[c] for c in clusters]
  
-    return clusters
+    return clusters0, possible_connections, clusters    
 
     print ('Time of execution: ', time.time() - start_time)
 
 
+def split_clusters(clusters, EMB, image_names):
+    from sklearn import mixture
+    import hdbscan
+    number_of_clusters = max(clusters)+1
+    EMBs = [[] for i in range(number_of_clusters)]
+    for i, emb in enumerate(EMB):
+        EMBs[clusters[i]].append(emb)
+
+    for i in range(int(round(len(EMBs[1])/2.2)), int(round(len(EMBs[1])/10)), -1):
+        clusterer = hdbscan.HDBSCAN(min_cluster_size=i, min_samples = 2, prediction_data=True).fit(np.array(EMBs[1], dtype='float64').transpose())
+        soft_clusters = hdbscan.all_points_membership_vectors(clusterer)
+        small_clusters = [np.argmax(x) for x in soft_clusters]
+        print (small_clusters)
+    # for i in range(2,5):        
+    #     dpgmm = mixture.BayesianGaussianMixture(n_components=i, covariance_type='full').fit(EMBs[1])
+    #     new_pred = dpgmm.predict(EMBs[1])
+    #     new_score = dpgmm.score(EMBs[1])
+    #     print (i, new_pred)
+
+
+
+
+
+
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser("Analyses embeddings from npy (embeddings represents images).")
-        
-    parser.add_argument("embeddings_path", type=str, help="path to embeddings.npy (image_names.npy must be next to it)", nargs='?')
-    parser.add_argument("-imgf", type=str, help="if set, generates folders with clusters (copies images)", nargs=1)
+    parser = argparse.ArgumentParser("Analyses embeddings from npy (embeddings represents images).")   
 
-    parser.add_argument("-n", help="number of images to analyse", type=int, nargs=1)
+    parser.add_argument("-mcs", help="min_cluster_size (>1) - set manually for larger datasets with small clusters (default: len(dataset)/100)", type=int, nargs=1)
+
+    parser.add_argument("-embspath", type=str, help="path to embeddings.npy, image_names.npy must be next to it (default: './output/embeddings_data.npy')", nargs=1)
+    parser.add_argument("-imgspath", type=str, help="path to dataset folder, required for --cf option if dataset not in './data/'", nargs=1)
+
+    parser.add_argument("-n", help="number of images to analyse (max = len(embeddings_data))", type=int, nargs=1)
 
     parser.add_argument("--p", action="store_true", help="precision_boost - improves precision of noise clustering, increases execution time")
 
-    args = parser.parse_args()  
-    
-    if not args.imgf:
-        dataset_folder = ''
-    else:
-        dataset_folder = args.imgf[0]
+    parser.add_argument("--cf", action="store_true", help="create folders - creates folders of clusters (copies images) ('./output/data_clusters/')")
 
-    if args.embeddings_path is None:
-        # LOG_DIR_name = os.path.split(cfg.DATASET_FOLDER)
+    parser.add_argument("--s", action="store_true", help="generates smaller clusters inside each cluster ('./output/CLUSTER_NAME.txt')")
+
+    args = parser.parse_args()  
+
+    if not os.path.exists('./output/'):
+        os.makedirs('./output/')
+    
+    if not args.imgspath:
+        dataset_folder = cfg.DATASET_FOLDER
+    else:
+        dataset_folder = args.imgspath[0]
+
+    if args.embspath is None:
         df = dataset_folder
-        if df == '': df = cfg.DATASET_FOLDER
-        LOG_DIR_name = './embeddings_' + os.path.split(df.strip('/').strip('\\').strip('\\\\').strip('//'))[-1] + '.npy'
+        LOG_DIR_name = './output/embeddings_' + os.path.split(df.strip('/').strip('\\').strip('\\\\').strip('//'))[-1] + '.npy'
         embeddings_path = LOG_DIR_name
         image_names_path = embeddings_path.replace('embeddings_', 'image_names_')
     else:
-        embeddings_path = args.embeddings_path
-        print (embeddings_path)
+        embeddings_path = args.embspath[0]
         LOG_DIR_name = os.path.split(embeddings_path)
-        image_names_path = embeddings_path.replace('embeddings_', 'image_names_')
+        image_names_path = os.path.join(LOG_DIR_name[0], LOG_DIR_name[-1].replace('embeddings_', 'image_names_'))
+
 
     if args.p:  
         print("Method: precision_boost")
         precision_boost = True
+    else:
+        precision_boost = False
     if args.n:  
         print("Analyzing {0} images".format(str(args.n[0])))
         number_of_images = args.n[0]
@@ -356,22 +427,33 @@ if __name__ == '__main__':
         image_names = np.load(image_names_path)[:]
         print("Analyzing all {0} images".format(str(len(EMB))))
 
+    if args.mcs:
+        mcs = args.mcs[0]
+    else:
+        mcs = 0
+
 
     #dodati da ostavlja nesigurni sum vani
 
     print ('Embeddings and image names loaded.')
 
-    clusters = analyze_embeddings(EMB, image_names) # za sve slike 
-    if dataset_folder == '':
-        LOG_DIR_name = os.path.split(embeddings_path)
-        datasetFolder = os.path.join(LOG_DIR_name[0], LOG_DIR_name[1].strip('.npy') + '_clusters')
-        outFile = open(datasetFolder+'.txt','w')
-        for imgi in range(len(image_names)):
-            outFile.write('\n')
-            outFile.write(image_names[imgi] + '\n')
-            outFile.write('Cluster: ' + str(clusters[imgi]) + '\n')
-        outFile.close()
-        print('Image labels: ', clusters)
-        print('Clusters saved into: {0}'.format(datasetFolder))
-    else:
+    clusters_not_connected, connections, clusters = analyze_embeddings(EMB, image_names, precision_boost, mcs)
+    
+    LOG_DIR_name = os.path.split(embeddings_path)
+    datasetFolder = os.path.join('./output/', LOG_DIR_name[1].strip('.npy').replace('embeddings_', '') + '_clusters') + '.txt'
+    outFile = open(datasetFolder,'w')
+    for imgi in range(len(image_names)):
+        outFile.write(image_names[imgi] + '\n')
+        outFile.write('Cluster init: ' + str(clusters_not_connected[imgi]) + '\n')
+        outFile.write('Cluster FINAL: ' + str(clusters[imgi]) + '\n\n')
+    outFile.close()
+    print('Image labels: ', clusters)
+    print('Clusters saved into: {0}'.format(datasetFolder))
+    
+    if args.cf:
         make_folders(clusters, dataset_folder, '_clusters', image_names)
+
+    if args.s:
+        print ('Generating small clusters description files...')
+        split_clusters(clusters, EMB, image_names)
+        print ('Done')
