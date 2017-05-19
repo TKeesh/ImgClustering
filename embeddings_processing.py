@@ -1,5 +1,6 @@
 from embeddings_processing_config import cfg
 
+from scipy import spatial
 import scipy.misc
 import numpy as np
 
@@ -9,8 +10,8 @@ precision_boost = False
 
 
 def create_summary_embeddings(sess, images, image_names, EMB1, EMB2, LOG_DIR):
-    from synset import *
 
+    import synset
     import tensorflow as tf
     from tensorflow.contrib.tensorboard.plugins import projector
 
@@ -147,6 +148,7 @@ def make_folders(clusters, datasetFolder, extension, fnames):
 
 def connections_valid(clusters_of_clusters, clusters_mean):
     import operator
+
     connected = {}
     for i in range(len(clusters_mean)):
         avg_dist, br = 0, 0
@@ -222,7 +224,6 @@ def nearest_neighbours2(EMB, classes, clusters_mean, clusters_classes, image_nam
 
 
 def analyze_embeddings(EMB, image_names = ''):    
-    from scipy import spatial
 
     from sklearn.manifold import TSNE
     from sklearn.cluster import DBSCAN
