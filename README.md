@@ -13,20 +13,20 @@
 3. Extract all the files into `./models/`
 
 ### Generating embeddings for images:
-  1. Executing:
-  ```Shell
-  python forward_resnet.py
-  ```
-  With parametar ```-m (50, 101, 152)``` you can execute this script on ResNet-L50, ResNet-L101 and ResNet-L152 models.
+	1. Executing:
+	```Shell
+	python forward_resnet.py
+	```
+	With parametar ```-m (50, 101, 152)``` you can execute this script on ResNet-L50, ResNet-L101 and ResNet-L152 models.
 
-  **Note:** If you want to see embeddings in tensorboard, execute with parametar ```--tb```
+	**Note:** If you want to see embeddings in tensorboard, execute with parametar ```--tb```
+	
+	After this you will get `./output/` folder with `embedding_data.npy` and `image_names_data.npy`
 
-  After this you will get `./output/` folder with `embedding_data.npy` and `image_names_data.npy`
-
-  2. Visualizing tensorboard if created:
-  ```Shell
-  tensorboard --logdir tensorboard/test_data
-  ```
+	2. Visualizing tensorboard if created:
+	```Shell
+	tensorboard --logdir tensorboard/test_data
+	```
 
  ### bla
    1. 
