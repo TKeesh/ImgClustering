@@ -350,20 +350,29 @@ def analyze_embeddings(EMB, image_names = '', precision_boost=False, mcs=0):
     print ('Time of execution: ', time.time() - start_time)
 
 
-def split_clusters(clusters, EMB, image_names):
-    from sklearn import mixture
-    import hdbscan
-    number_of_clusters = max(clusters)+1
-    EMBs = [[] for i in range(number_of_clusters)]
-    for i, emb in enumerate(EMB):
-        EMBs[clusters[i]].append(emb)
+# def split_clusters(clusters, EMB, image_names):
+#     from sklearn import mixture
+#     import hdbscan
+#     number_of_clusters = max(clusters)+1
+#     EMBs = []
+#     for i in range(number_of_clusters):        
+#         print (np.array(EMB[np.array(clusters)==i]).shape)
+#         EMBs.append(np.array(EMB[np.array(clusters)==i]))
+#     #int(round(len(EMBs[1])/2.2))
+#     for i in range(10, 20):
+#         print (EMBs[1].shape)
+#         print(type(EMBs[1]))
+#         print(i)
 
-    for i in range(int(round(len(EMBs[1])/2.2)), int(round(len(EMBs[1])/10)), -1):
-        clusterer = hdbscan.HDBSCAN(min_cluster_size=i, min_samples = 2, prediction_data=True).fit(np.array(EMBs[1], dtype='float64').transpose())
-        soft_clusters = hdbscan.all_points_membership_vectors(clusterer)
-        small_clusters = [np.argmax(x) for x in soft_clusters]
-        print (small_clusters)
-    # for i in range(2,5):        
+#         clusterer = hdbscan.HDBSCAN(min_cluster_size=i, min_samples = 2, prediction_data=True).fit(EMBs[1].astype('float64'))
+#         clusters = clusterer.labels_
+#         print (clusters)
+#         soft_clusters = hdbscan.all_points_membership_vectors(clusterer)
+#         small_clusters = [np.argmax(x) for x in soft_clusters]
+#         if i == 2: 
+#             break
+#         print (small_clusters)
+#     # for i in range(2,5):        
     #     dpgmm = mixture.BayesianGaussianMixture(n_components=i, covariance_type='full').fit(EMBs[1])
     #     new_pred = dpgmm.predict(EMBs[1])
     #     new_score = dpgmm.score(EMBs[1])
@@ -389,7 +398,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--cf", action="store_true", help="create folders - creates folders of clusters (copies images) ('./output/data_clusters/')")
 
-    parser.add_argument("--s", action="store_true", help="generates smaller clusters inside each cluster ('./output/CLUSTER_NAME.txt')")
+    # parser.add_argument("--s", action="store_true", help="generates smaller clusters inside each cluster ('./output/CLUSTER_NAME.txt')")
 
     args = parser.parse_args()  
 
@@ -453,7 +462,7 @@ if __name__ == '__main__':
     if args.cf:
         make_folders(clusters, dataset_folder, '_clusters', image_names)
 
-    if args.s:
-        print ('Generating small clusters description files...')
-        split_clusters(clusters, EMB, image_names)
-        print ('Done')
+    # if args.s:
+    #     print ('Generating small clusters description files...')
+    #     split_clusters(clusters, EMB, image_names)
+    #     print ('Done')
