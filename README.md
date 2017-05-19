@@ -16,6 +16,7 @@ python data_preprocessing.py input_dir output_dir
 
 `--c` - removes padding
 
+
 1. Place `.jpg` images into `./data/ folder`
 2. Download pretrained model from `tensorflow-resnet-pretrained-20160509.tar.gz.torrent`
 3. Extract all the files into `./models/`
@@ -53,19 +54,21 @@ If you want to skip this step you can use our `*.npy` files from this commit for
 
 3. Precission boost method:
     `--p`
+
     With TSNE boosts precission of noise images clustering, executes much slower
     
     Optional method which is significantly slower and only a bit more accurate
 
 4. Adjust algoritham to work on specific datasets:
     `-mcs`
+
     Set the minimum cluster size which algoritham finds
 
 Working on **Mozgalo2017_dataset** embeddings:
-
     ```Shell
     python embeddings_processing.py -embspath './output/embeddings_data_0.npy'
     ```
+    
     `-n` - <= 6889
 
     `--cf` - `./output/DATA_embeddings`
