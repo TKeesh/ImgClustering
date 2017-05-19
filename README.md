@@ -45,7 +45,7 @@ python data_preprocessing.py input_dir output_dir
     ```Shell
     python embeddings_processing.py
     ```
-    Use the parametar `-n` to set the number of embeddings to work on ( <= number of images in data folder )
+    Use the parametar `-n` to set the number of embeddings to work on
 
 2. Create folders with clustered dataset:
     `--cf`
@@ -68,9 +68,6 @@ python data_preprocessing.py input_dir output_dir
     ```Shell
     python embeddings_processing.py -embspath './output/embeddings_data_0.npy'
     ```
-
-    `-n` - <= 6889
-
     `--cf` - `./output/DATA_embeddings`
 
     If using `--cf` all Mozgalo2017_dataset images must be in `./data/` or in custom folder specified with `-imgspath`
