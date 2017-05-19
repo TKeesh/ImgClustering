@@ -8,11 +8,23 @@
   ```
 
 ### Setting up data:
-  Place images into ./data/ folder
+1. Place images into `./data/ folder`
+2. Download pretrained model from `ensorflow-resnet-pretrained-20160509.tar.gz.torrent`
+3. Extract all the files into `./models/`
 
 ### Generating embeddings for images:
+  1. 
   ```Shell
   python forward_resnet.py
   ```
-  After this you will get ./output/ folder with embedding_data.npy and image_names_data.npy files
+  With parametar ```-m (50, 101, 152)``` you can execute this script on ResNet-L50, ResNet-L101 and ResNet-L152 models.
+  **Note:** If you want to see embeddings in tensorboard, execute with parameta ```--tb```
+
+  After this you will get `./output/` folder with `embedding_data.npy` and `image_names_data.npy`
+  2.
+  Visualizing tensorboard if created:
+  ```Shell
+  tensorboard --logdir tensorboard/test_data
+  ```
+
 
