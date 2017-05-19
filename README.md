@@ -12,8 +12,9 @@ You can use our `data_preprocessing.py` script to change dataset to `.jpg` or ma
 ```Shell
 python data_preprocessing.py input_dir output_dir
 ```
-`--m` - masked - smart images preprocessing
-`--c` - crop - removes padding
+`--m` - smart images preprocessing
+
+`--c` - removes padding
 
 1. Place `.jpg` images into `./data/ folder`
 2. Download pretrained model from `tensorflow-resnet-pretrained-20160509.tar.gz.torrent`
@@ -68,7 +69,7 @@ Working on **Mozgalo2017_dataset** embeddings:
     `-n` - <= 6889
 
     `--cf` - `./output/DATA_embeddings`
-    
+
     If using `--cf` all Mozgalo2017_dataset images must be in `./data/` or in custom folder specified with `-imgspath`
 
 
