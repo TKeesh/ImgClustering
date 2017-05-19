@@ -4,14 +4,15 @@ from scipy import spatial
 import scipy.misc
 import numpy as np
 
+from synset import *
+
 import os, time, argparse
 
 precision_boost = False
 
 
 def create_summary_embeddings(sess, images, image_names, EMB1, EMB2, LOG_DIR):
-
-    import synset
+    
     import tensorflow as tf
     from tensorflow.contrib.tensorboard.plugins import projector
 
@@ -62,7 +63,7 @@ def create_summary_embeddings(sess, images, image_names, EMB1, EMB2, LOG_DIR):
     # write metadata
     metadata_file = open(os.path.join(LOG_DIR, 'metadata.tsv'), 'w')
     metadata_file.write('Name\tClass\n')
-    cnf = open(os.path.join(LOG_DIR_name[0], 'classes.txt'), 'w')
+    cnf = open(os.path.join('./', 'classes.txt'), 'w')
     for i, name in enumerate(image_names):
         prob = EMB1[i]
         pred = np.argsort(prob)[::-1]
@@ -73,9 +74,6 @@ def create_summary_embeddings(sess, images, image_names, EMB1, EMB2, LOG_DIR):
         cnf.write('\n')
     cnf.close()
     metadata_file.close()
-
-
-    print('embeddings saved')
 
     # create sprite
     print('creating sprite')
@@ -240,6 +238,8 @@ def analyze_embeddings(EMB, image_names = ''):
          
     print ('HDBSCAN fit...')
     min_cluster_size = int(len(EMB) / 100)
+    if min_cluster_size < 2:
+        min_cluster_size = 2
     clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples = 2).fit(EMB) # za soft_clustering: , prediction_data=True
     clusters = clusterer.labels_
     print ('HDBSCAN done')

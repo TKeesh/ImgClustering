@@ -9,7 +9,7 @@ import skimage.io
 #from caffe.proto import caffe_pb2
 from synset import *
 
-import resnet
+
 
 
 class CaffeParamProvider():
@@ -227,6 +227,7 @@ def meta_fn(layers):
 
 
 def convert(graph, img, img_p, layers):
+    import resnet
     caffe_model = load_caffe(img_p, layers)
 
     #for i, n in enumerate(caffe_model.params):

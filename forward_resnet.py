@@ -1,15 +1,19 @@
-from convert import print_prob, load_image, checkpoint_fn, meta_fn
-import tensorflow as tf
+import skimage.io  # bug. need to import this before tensorflow
+import skimage.transform  # bug. need to import this before tensorflow
 import os
 import numpy as np
 import time
 from embeddings_processing import *
-import cv2
+
 import argparse
 
 from embeddings_processing_config import cfg
 
 def resnet(dataDir):
+    from convert import print_prob, load_image, checkpoint_fn, meta_fn
+    import tensorflow as tf
+    import cv2
+
     layers = 101
 
     sess = tf.Session()
@@ -36,9 +40,9 @@ def resnet(dataDir):
         if i == 1:
             start_time = time.time()
         print(str(i+1).rjust(4) + '/' + str(len(image_names)) + ' - ' + img_name)
-        img = load_image(dataDir + img_name)
+        img = load_image(os.path.join(dataDir, img_name))
 
-        image = cv2.imread(dataDir + img_name)
+        image = cv2.imread(os.path.join(dataDir, img_name))
         image = cv2.resize(image, (cfg.EMB_IMAGE_HEIGHT, cfg.EMB_IMAGE_WIDTH), interpolation = cv2.INTER_CUBIC)
         images_list[i] = image
 
@@ -81,8 +85,10 @@ if __name__ == '__main__':
     im_names = np.asarray(image_names)
     LOG_DIR_name = os.path.split(dataDir)
     np.save(os.path.join(LOG_DIR_name[0], 'image_names_' + LOG_DIR_name[1]), im_names)
-    np.save(os.path.join(LOG_DIR_name[0], 'embeddings_' + LOG_DIR_name[1]), EMB)
+    np.save(os.path.join(LOG_DIR_name[0], 'embeddings_' + LOG_DIR_name[1]), EMB2)
     print("Done.")
 
     if args.tb:
+        print("Saving tensorboard...")
         create_summary_embeddings(sess, images_list, image_names, EMB1, EMB2, 'tensorboard/test_' + LOG_DIR_name[1])
+        print("Done.")
