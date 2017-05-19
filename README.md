@@ -32,7 +32,7 @@ python data_preprocessing.py input_dir output_dir
 
     **Note:** If you want to see embeddings in tensorboard, execute with parametar ```--tb```    
 
-If you want to skip this step you can use our `*.npy` files from this commit for **Mozgalo2017_dataset**
+  If you want to skip this step you can use our `*.npy` files from this commit for **Mozgalo2017_dataset**
 
 2. Visualizing tensorboard if created:
     ```Shell
@@ -64,11 +64,11 @@ If you want to skip this step you can use our `*.npy` files from this commit for
 
     Set the minimum cluster size which algoritham finds
 
-Working on **Mozgalo2017_dataset** embeddings:
+5. **Working on Mozgalo2017_dataset embeddings:**
     ```Shell
     python embeddings_processing.py -embspath './output/embeddings_data_0.npy'
     ```
-    
+
     `-n` - <= 6889
 
     `--cf` - `./output/DATA_embeddings`
