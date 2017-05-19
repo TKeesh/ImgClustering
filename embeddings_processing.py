@@ -1,25 +1,19 @@
 from embeddings_processing_config import cfg
 
-import tensorflow as tf
-from tensorflow.contrib.tensorboard.plugins import projector
 import scipy.misc
 import numpy as np
 
-from glob import glob
-from scipy import spatial
-
 import os, time, argparse
-
-from synset import *
-
-from sklearn.manifold import TSNE
-from sklearn.cluster import DBSCAN
-import hdbscan
 
 precision_boost = False
 
 
 def create_summary_embeddings(sess, images, image_names, EMB1, EMB2, LOG_DIR):
+    from synset import *
+
+    import tensorflow as tf
+    from tensorflow.contrib.tensorboard.plugins import projector
+
     """
     Create summary for embeddings.
     :param sess: Session object.
@@ -122,6 +116,8 @@ def _images_to_sprite(data):
 
 
 def make_folders(clusters, datasetFolder, extension, fnames):    
+    from glob import glob
+
     folder = './' + os.path.split(datasetFolder.strip('/').strip('\\').strip('\\\\').strip('//'))[-1] + extension
     print ('Creating folders with clusters ({0})...'.format(folder))
     # datasetFolder = datasetFolder.strip('.').strip('/')
@@ -226,7 +222,11 @@ def nearest_neighbours2(EMB, classes, clusters_mean, clusters_classes, image_nam
 
 
 def analyze_embeddings(EMB, image_names = ''):    
+    from scipy import spatial
 
+    from sklearn.manifold import TSNE
+    from sklearn.cluster import DBSCAN
+    import hdbscan
 
     fnames = image_names
 
