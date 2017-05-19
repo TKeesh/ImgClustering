@@ -1,0 +1,6 @@
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore
+!embeddings_data_0.npy
+!image_names_data_0.npy
