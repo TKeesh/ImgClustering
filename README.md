@@ -68,9 +68,7 @@ python data_preprocessing.py input_dir output_dir
     ```Shell
     python embeddings_processing.py -embspath './output/embeddings_data_0.npy'
     ```
-    `--cf` - `./output/DATA_embeddings`
-
-    If using `--cf` all Mozgalo2017_dataset images must be in `./data/` or in custom folder specified with `-imgspath`
+    If using `--cf` all Mozgalo2017_dataset images must be in `./data/` or in custom folder specified with `-imgspath`. Output: `./output/DATA_embeddings`
 
 
 
