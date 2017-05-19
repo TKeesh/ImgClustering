@@ -34,11 +34,11 @@ python data_preprocessing.py input_dir output_dir
     ```Shell
     python forward_resnet.py
     ```
-    With parametar ```-m (50, 101, 152)``` you can execute this script on ResNet-L50, ResNet-L101 and ResNet-L152 models.
+    With parameter ```-m (50, 101, 152)``` you can execute this script on ResNet-L50, ResNet-L101 and ResNet-L152 models.
 
     This will generate `./output/` folder with `embeddings_data.npy` and `image_names_data.npy`
 
-    **Note:** If you want to see embeddings in tensorboard, execute with parametar ```--tb```    
+    **Note:** If you want to see embeddings in tensorboard, execute with parameter ```--tb```    
 
   If you want to skip this step you can use our `*.npy` files from this commit for **Mozgalo2017_dataset**
 
@@ -53,7 +53,7 @@ python data_preprocessing.py input_dir output_dir
     ```Shell
     python embeddings_processing.py
     ```
-    Use the parametar `-n` to set the number of embeddings to work on
+    Use the parameter `-n` to set the number of embeddings to work on
 
 2. Create folders with clustered dataset:
     `--cf`
