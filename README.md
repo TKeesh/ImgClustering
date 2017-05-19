@@ -17,7 +17,7 @@ python data_preprocessing.py input_dir output_dir
 `--c` - removes padding
 
 
-1. Place `.jpg` images into `./data/ folder`
+1. Place `.jpg` images into `./data/` folder
 2. Download pretrained model from `tensorflow-resnet-pretrained-20160509.tar.gz.torrent`
 3. Extract all the files into `./models/`
 
