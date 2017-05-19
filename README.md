@@ -65,7 +65,7 @@ python data_preprocessing.py input_dir output_dir
 
     With TSNE boosts precission of noise images clustering, executes much slower
     
-    Optional method which is significantly slower and only a bit more accurate
+    Optional method which is significantly slower and only a bit more accurate. Can give better results on larger datasets.
 
 4. Adjust algoritham to work on specific datasets:
     `-mcs`
@@ -78,6 +78,16 @@ python data_preprocessing.py input_dir output_dir
     ```
     If using `--cf` all Mozgalo2017_dataset images must be in `./data/` or in custom folder specified with `-imgspath`. 
     Output: `./output/DATA_embeddings`, DATA calculated from imgspath folder
+
+### ToDo
+
+1. Test precission_boost on larger datasets, adjust TSNE
+
+2. Detecting small clusters in the noise and detecting false noise clustering
+
+3. Splitting clusters into the small clusters with visualization
+
+4. Reduce min_cluster_size recursively while n_clusters < threshold - adjust model on the fly
 
 
 
