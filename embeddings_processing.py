@@ -16,12 +16,10 @@ from sklearn.manifold import TSNE
 from sklearn.cluster import DBSCAN
 import hdbscan
 
-
-
 precision_boost = False
 
 
-def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
+def create_summary_embeddings(sess, images, image_names, EMB1, EMB2, LOG_DIR):
     """
     Create summary for embeddings.
     :param sess: Session object.
@@ -36,7 +34,7 @@ def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
     test_writer = tf.summary.FileWriter(LOG_DIR, sess.graph)
     # The embedding variable, which needs to be stored
     # Note this must a Variable not a Tensor!
-    embedding_var = tf.Variable(EMB, name='output_tensor')
+    embedding_var = tf.Variable(EMB2, name='output_tensor')
     # init
     sess.run(embedding_var.initializer)
     #create summary writter
@@ -54,10 +52,10 @@ def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
     embedding.sprite.single_image_dim.extend([cfg.EMB_IMAGE_HEIGHT, cfg.EMB_IMAGE_WIDTH])
 
     #NASE save embedings as np
-    im_names = np.asarray(image_names)
-    LOG_DIR_name = os.path.split(LOG_DIR)
-    np.save(os.path.join(LOG_DIR_name[0], 'image_names_' + LOG_DIR_name[1]), im_names)
-    np.save(os.path.join(LOG_DIR_name[0], 'embeddings_' + LOG_DIR_name[1]), EMB)
+    # im_names = np.asarray(image_names)
+    # LOG_DIR_name = os.path.split(LOG_DIR)
+    # np.save(os.path.join(LOG_DIR_name[0], 'image_names_' + LOG_DIR_name[1]), im_names)
+    # np.save(os.path.join(LOG_DIR_name[0], 'embeddings_' + LOG_DIR_name[1]), EMB2)
 
     # projector run
     projector.visualize_embeddings(summary_writer, config)
@@ -67,27 +65,20 @@ def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
     saver.save(sess, os.path.join(LOG_DIR, 'model.ckpt'), 1)
 
     # write metadata
-    if len(EMB[0]) == 1000:
-        metadata_file = open(os.path.join(LOG_DIR, 'metadata.tsv'), 'w')
-        metadata_file.write('Name\tClass\n')
-        cnf = open(os.path.join(LOG_DIR_name[0], 'classes.txt'), 'w')
-        for i, name in enumerate(image_names):
-            prob = EMB[i]
-            pred = np.argsort(prob)[::-1]
-            metadata_file.write('%06d\t%s\n' % (i, name+': '+' '.join(synset[pred[0]].split()[1:])))
-            cnf.write(name + ': ')
-            topX = [' '.join(synset[pred[i]].split()[1:]) for i in range(7)]
-            #print (topX)
-            cnf.write(' | '.join(topX))            
-            cnf.write('\n')
-        cnf.close()
-        metadata_file.close()
-    else:
-        metadata_file = open(os.path.join(LOG_DIR, 'metadata.tsv'), 'w')
-        metadata_file.write('Name\tClass\n')
-        for i, name in enumerate(image_names):
-            metadata_file.write('%06d\t%s\n' % (i, name))
-        metadata_file.close()
+    metadata_file = open(os.path.join(LOG_DIR, 'metadata.tsv'), 'w')
+    metadata_file.write('Name\tClass\n')
+    cnf = open(os.path.join(LOG_DIR_name[0], 'classes.txt'), 'w')
+    for i, name in enumerate(image_names):
+        prob = EMB1[i]
+        pred = np.argsort(prob)[::-1]
+        metadata_file.write('%06d\t%s\n' % (i, name+': '+' '.join(synset[pred[0]].split()[1:])))
+        cnf.write(name + ': ')
+        topX = [' '.join(synset[pred[i]].split()[1:]) for i in range(7)]
+        cnf.write(' | '.join(topX))            
+        cnf.write('\n')
+    cnf.close()
+    metadata_file.close()
+
 
     print('embeddings saved')
 
@@ -96,8 +87,6 @@ def create_summary_embeddings(sess, images, image_names, EMB, LOG_DIR):
     if len(images): sprite = _images_to_sprite(images)
     print('saving sprite')
     if len(images): scipy.misc.imsave(os.path.join(LOG_DIR, 'sprite.png'), sprite)
-    # with open('names.txt', 'w') as f:
-    #     f.write('\n'.join(image_names))
 
 
 def _images_to_sprite(data):
@@ -133,26 +122,30 @@ def _images_to_sprite(data):
 
 
 def make_folders(clusters, datasetFolder, extension, fnames):    
-    folder = datasetFolder + extension
+    folder = './' + os.path.split(datasetFolder.strip('/').strip('\\').strip('\\\\').strip('//'))[-1] + extension
     print ('Creating folders with clusters ({0})...'.format(folder))
-    datasetFolder = datasetFolder.strip('.').strip('/')
-    outFile = open(datasetFolder+'.txt','w')
-    for imgi in range(len(fnames)):
-        outFile.write('\n')
-        outFile.write(fnames[imgi] + '\n')
-        outFile.write('Cluster: ' + str(clusters[imgi]) + '\n')
-    outFile.close()
+    # datasetFolder = datasetFolder.strip('.').strip('/')
+    # outFile = open(datasetFolder+'.txt','w')
+    # for imgi in range(len(fnames)):
+    #     outFile.write('\n')
+    #     outFile.write(fnames[imgi] + '\n')
+    #     outFile.write('Cluster: ' + str(clusters[imgi]) + '\n')
+    # outFile.close()
     if os.path.exists(folder): 
         import shutil
         shutil.rmtree(folder)
     for imgi in range(len(clusters)):
         # print (fnames[imgi])
-        if not os.path.exists(folder + '\\' + str(clusters[imgi])):
-            os.makedirs(folder + '\\' + str(clusters[imgi]))
+        out_folder = os.path.join(folder, str(clusters[imgi]))
+        if not os.path.exists(out_folder):
+            os.makedirs(out_folder)
         imgorg = glob(os.path.join(datasetFolder, fnames[imgi].split('.')[0]) + '.*')[0]
         try: img = (scipy.misc.imread(imgorg)[:,:,:3]).astype('float32')
         except: img = (scipy.misc.imread(imgorg)[:]).astype('float32')
-        scipy.misc.imsave(os.path.join(folder + '\\' + str(clusters[imgi]) + '\\', imgorg.split('\\')[-1]), img)
+        # print(os.path.join(out_folder, os.path.split(imgorg)[-1]))
+        # print(img.shape)
+        # os.chdir(os.path.dirname(__file__))
+        scipy.misc.imsave(os.path.join(out_folder, os.path.split(imgorg)[-1]), img)
     print ('Folders created')
 
 
@@ -232,16 +225,11 @@ def nearest_neighbours2(EMB, classes, clusters_mean, clusters_classes, image_nam
     return classes_noise, image_names_noise
 
 
-def create_folders(EMB, image_names = '', images_folder = ''):    
-    if len(images_folder): 
-        datasetFolder = images_folder
-    else: 
-        datasetFolder = cfg.DATASET_FOLDER
-    if len(image_names): 
-        fnames = image_names
-    else: 
-        fnames = os.listdir(images_folder)
-        fnames.sort()
+def analyze_embeddings(EMB, image_names = ''):    
+
+
+    fnames = image_names
+
     try: 
         fnames = [x.decode('UTF-8') for x in fnames]
     except: pass
@@ -255,8 +243,7 @@ def create_folders(EMB, image_names = '', images_folder = ''):
     clusters = clusterer.labels_
     print ('HDBSCAN done')
 
-    make_folders(clusters, datasetFolder, 'ClustersHDBSCAN', fnames)
-
+    # make_folders(clusters, datasetFolder, 'ClustersHDBSCAN', fnames)
 
     mat2D=EMB
     if precision_boost:
@@ -318,18 +305,18 @@ def create_folders(EMB, image_names = '', images_folder = ''):
             clusters[i] = classes_noise[br]
             br += 1
     clusters = [final_clusters[c] for c in clusters]
-    make_folders(clusters, datasetFolder, 'NOVOOOOO', fnames)
+ 
+    return clusters
 
-    print (time.time() - start_time)
-
+    print ('Time of execution: ', time.time() - start_time)
 
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Analyses embeddings from npy (embeddings represents images).")
         
-    parser.add_argument("embeddings_path", type=str, help="path to embeddings.npy (image_names.npy must be next to it)", nargs=1)
-    parser.add_argument("imagesFolder", type=str, help="folder with images", nargs=1)
+    parser.add_argument("embeddings_path", type=str, help="path to embeddings.npy (image_names.npy must be next to it)", nargs='?')
+    parser.add_argument("-imgf", type=str, help="if set, generates folders with clusters (copies images)", nargs=1)
 
     parser.add_argument("-n", help="number of images to analyse", type=int, nargs=1)
 
@@ -337,24 +324,53 @@ if __name__ == '__main__':
 
     args = parser.parse_args()  
     
-    if len(args.imagesFolder) == 0:
-        dataset_folder = cfg.
+    if not args.imgf:
+        dataset_folder = ''
+    else:
+        dataset_folder = args.imgf[0]
+
+    if args.embeddings_path is None:
+        # LOG_DIR_name = os.path.split(cfg.DATASET_FOLDER)
+        df = dataset_folder
+        if df == '': df = cfg.DATASET_FOLDER
+        LOG_DIR_name = './embeddings_' + os.path.split(df.strip('/').strip('\\').strip('\\\\').strip('//'))[-1] + '.npy'
+        embeddings_path = LOG_DIR_name
+        image_names_path = embeddings_path.replace('embeddings_', 'image_names_')
+    else:
+        embeddings_path = args.embeddings_path
+        print (embeddings_path)
+        LOG_DIR_name = os.path.split(embeddings_path)
+        image_names_path = embeddings_path.replace('embeddings_', 'image_names_')
 
     if args.p:  
         print("Method: precision_boost")
         precision_boost = True
     if args.n:  
-        print("Analyzing {0} images".format(str(n)))
+        print("Analyzing {0} images".format(str(args.n[0])))
         number_of_images = args.n[0]
+        EMB = np.load(embeddings_path)[:number_of_images]
+        image_names = np.load(image_names_path)[:number_of_images]
+    else:
+        EMB = np.load(embeddings_path)[:]
+        image_names = np.load(image_names_path)[:]
+        print("Analyzing all {0} images".format(str(len(EMB))))
+
 
     #dodati da ostavlja nesigurni sum vani
 
-    EMB = np.load('./tensorboard/embeddings_and_tensorboards/embeddings_2048_ResNet_101L.npy')[:number_of_images]
-    # EMB = np.load('./tensorboard/embeddings_test_2048_ResNet-L101.npy')[:number_of_images]
-    image_names = np.load('./tensorboard/embeddings_and_tensorboards/image_names_2048_ResNet_101L.npy')[:number_of_images]
-    # image_names = np.load('./tensorboard/image_names_test_2048_ResNet-L101.npy')[:number_of_images]
-
     print ('Embeddings and image names loaded.')
-    # #create_summary_embeddings(sess, images_list, image_names, EMB, '')
 
-    create_folders(EMB, image_names, './datasetJPG/') # za sve slike 
+    clusters = analyze_embeddings(EMB, image_names) # za sve slike 
+    if dataset_folder == '':
+        LOG_DIR_name = os.path.split(embeddings_path)
+        datasetFolder = os.path.join(LOG_DIR_name[0], LOG_DIR_name[1].strip('.npy') + '_clusters')
+        outFile = open(datasetFolder+'.txt','w')
+        for imgi in range(len(image_names)):
+            outFile.write('\n')
+            outFile.write(image_names[imgi] + '\n')
+            outFile.write('Cluster: ' + str(clusters[imgi]) + '\n')
+        outFile.close()
+        print('Image labels: ', clusters)
+        print('Clusters saved into: {0}'.format(datasetFolder))
+    else:
+        make_folders(clusters, dataset_folder, '_clusters', image_names)

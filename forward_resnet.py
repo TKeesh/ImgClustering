@@ -5,6 +5,7 @@ import numpy as np
 import time
 from embeddings_processing import *
 import cv2
+import argparse
 
 from embeddings_processing_config import cfg
 
@@ -60,25 +61,28 @@ def resnet(dataDir):
 
 	print("--- ResNet time: %s seconds ---" % (time.time() - start_time))
 
-
+	return sess, images_list, image_names, EMB1, EMB2
 
 
 
 if __name__ == '__main__':
-	resnet(dataDir)
-	dataDir = './data/'
 
+	parser = argparse.ArgumentParser("Generates embeddings from network.")
 
+	parser.add_argument("dataDir", type=str, help="folder with dataset images", nargs=1)
+	parser.add_argument("--tb", action="store_true", help="genenrates tensorboard")
 
+	args = parser.parse_args()	
 
+	dataDir = args.dataDir[0]
+	sess, images_list, image_names, EMB1, EMB2 = resnet(dataDir)
+	
+	print("Saving embeddings...")
+	im_names = np.asarray(image_names)
+    LOG_DIR_name = os.path.split(dataDir)
+    np.save(os.path.join(LOG_DIR_name[0], 'image_names_' + LOG_DIR_name[1]), im_names)
+    np.save(os.path.join(LOG_DIR_name[0], 'embeddings_' + LOG_DIR_name[1]), EMB)
+	print("Done.")
 
-
-print('saving embeddings')
-# args --tb
-#create_summary_embeddings(sess, images_list, image_names, EMB1, 'tensorboard/test_' + str(len(EMB1[0])) + '_ResNet-L' + str(layers)) 
-create_summary_embeddings(sess, images_list, image_names, EMB2, 'tensorboard/test_' + str(len(EMB2[0])) + '_ResNet-L' + str(layers))
-print('done')
-print('creating folders')
-# args --f
-create_folders(EMB2, image_names, dataDir)
-print('done')
+	if args.tb:
+		create_summary_embeddings(sess, images_list, image_names, EMB1, EMB2, 'tensorboard/test_' + LOG_DIR_name[1])
