@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser("Generates embeddings from network.")
 
-    parser.add_argument("-dataDir", type=str, help="folder with dataset images (default: './data/')", nargs=1)
+    parser.add_argument("--dataDir", type=str, help="folder with dataset images (default: './data/')", nargs=1)
     parser.add_argument("-m", type=str, help="choose ResNet model (50, 101 (default), 152)", nargs=1)
     parser.add_argument("--tb", action="store_true", help="genenrates tensorboard ('./tensorboard/test_data')")
 
