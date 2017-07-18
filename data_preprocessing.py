@@ -128,10 +128,10 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser("Converts images to jpg.")
 	parser.add_argument("imagesFolder", type=str, help="input_folder output_folder", nargs=2)
 
-	parser.add_argument("--m", action="store_true", help="masked - smart images preprocessing")
-	parser.add_argument("--c", action="store_true", help="crop - removes padding")
+	parser.add_argument("-m", action="store_true", help="masked - smart images preprocessing")
+	parser.add_argument("-c", action="store_true", help="crop - removes padding")
 
-	parser.add_argument("-wh", help="set output size (w x h)", type=int, nargs=2)
+	parser.add_argument("--wh", help="set output size (w x h)", type=int, nargs=2)
 
 	args = parser.parse_args()	
 
