@@ -387,18 +387,18 @@ def analyze_embeddings(EMB, image_names = '', precision_boost=False, mcs=0):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Analyses embeddings from npy (embeddings represents images).")   
 
-    parser.add_argument("-mcs", help="min_cluster_size (>1) - set manually for larger datasets with small clusters (default: len(dataset)/100)", type=int, nargs=1)
+    parser.add_argument("--mcs", help="min_cluster_size (>1) - set manually for larger datasets with small clusters (default: len(dataset)/100)", type=int, nargs=1)
 
-    parser.add_argument("-embspath", type=str, help="path to embeddings.npy, image_names.npy must be next to it (default: './output/embeddings_data.npy')", nargs=1)
-    parser.add_argument("-imgspath", type=str, help="path to dataset folder, required for --cf option if dataset not in './data/'", nargs=1)
+    parser.add_argument("--embspath", type=str, help="path to embeddings.npy, image_names.npy must be next to it (default: './output/embeddings_data.npy')", nargs=1)
+    parser.add_argument("--imgspath", type=str, help="path to dataset folder, required for --cf option if dataset not in './data/'", nargs=1)
 
     parser.add_argument("-n", help="number of images to analyse (max = len(embeddings_data))", type=int, nargs=1)
 
-    parser.add_argument("--p", action="store_true", help="precision_boost - improves precision of noise clustering, increases execution time")
+    parser.add_argument("-p", action="store_true", help="precision_boost - improves precision of noise clustering, increases execution time")
 
     parser.add_argument("--cf", action="store_true", help="create folders - creates folders of clusters (copies images) ('./output/data_clusters/')")
 
-    # parser.add_argument("--s", action="store_true", help="generates smaller clusters inside each cluster ('./output/CLUSTER_NAME.txt')")
+    # parser.add_argument("-s", action="store_true", help="generates smaller clusters inside each cluster ('./output/CLUSTER_NAME.txt')")
 
     args = parser.parse_args()  
 
