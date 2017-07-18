@@ -16,9 +16,9 @@ You can use our `data_preprocessing.py` script to change dataset to `.jpg` or ma
 ```Shell
 python data_preprocessing.py input_dir output_dir
 ```
-`--m` - smart images preprocessing
+`-m` - smart images preprocessing
 
-`--c` - removes padding
+`-c` - removes padding
 
 
 1. Place `.jpg` images into `./data/` folder
@@ -61,14 +61,14 @@ python data_preprocessing.py input_dir output_dir
     Folders with cluster indices will be created in `./output/data_clusters`
 
 3. Precission boost method:
-    `--p`
+    `-p`
 
     With TSNE boosts precission of noise images clustering, executes much slower
     
     Optional method which is significantly slower and only a bit more accurate. Can give better results on larger datasets.
 
 4. Adjust algoritham to work on specific datasets:
-    `-mcs`
+    `--mcs`
 
     Set the minimum cluster size which algoritham finds
 
